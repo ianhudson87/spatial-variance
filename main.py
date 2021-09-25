@@ -6,6 +6,8 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import torch
+import sampleMask
+import utils
 
 data_folder_name = "singlecoil_test_v2"
 data_path = os.path.join("data", data_folder_name)
@@ -24,13 +26,24 @@ fftshift = torch.fft.fftshift
 for i, data in enumerate(data_loader):
     # data is batch
     for j in range(data.shape[0]):
-        kspace = data[j]
-        test = torch.absolute(fftshift(ifft2(ifftshift(kspace))))
-        # test = torch.absolute(ifft2(kspace))
+        kspace = data[0]
+        sample_mask = sampleMask.get_sample_mask(kspace.shape[0], kspace.shape[1], 0.5)
+        # print(kspace.shape)
+        # print(sample_mask.shape)
+        undersampled_kspace = kspace * sample_mask
+        print(undersampled_kspace.dtype)
 
-        plt.figure()
-        plt.imshow(torch.absolute(kspace), cmap='gray')
-        plt.show()
+        image = torch.absolute(ifftshift(ifft2(fftshift(kspace))))
+        undersampled_image = torch.absolute(ifftshift(ifft2(fftshift(undersampled_kspace))))
+
+        # test = torch.absolute(ifft2(kspace))
+        # print(sample_mask)
+        utils.imshow(sample_mask)
+
+        utils.imshow(image)
+
+        utils.imshow(undersampled_image)
+
     # print(data.shape)
     # print(data[0].shape)
     # np_img = np.array(data[0])

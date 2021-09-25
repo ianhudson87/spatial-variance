@@ -22,6 +22,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         h5f = h5py.File(self.train_file, 'r')
+        print(h5f.keys())
         h5d = h5f['kspace']
         # print(type(h5d[0]))
         data_np = h5d[index] # np array (dtype=complex64)
