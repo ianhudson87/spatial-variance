@@ -9,13 +9,13 @@ import torch
 import sampleMask
 import utils
 
-data_folder_name = "singlecoil_test_v2"
+data_folder_name = "singlecoil_val"
 data_path = os.path.join("data", data_folder_name)
 
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 # print(h5_files[0])
 
-data_loader = dataReader.get_dataloader(h5_files[0])
+data_loader = dataReader.get_dataloader(h5_files[0], 'reconstruction_rss')
 
 ifftshift = torch.fft.ifftshift
 ifft2 = torch.fft.ifft2
@@ -44,6 +44,15 @@ for i, data in enumerate(data_loader):
 
         utils.imshow(undersampled_image)
 
+        print("set", j)
+
+        plt.figure()
+        plt.imshow(torch.absolute(kspace), cmap='gray')
+        plt.show()
+
+        plt.figure()
+        plt.imshow(torch.absolute(test), cmap='gray')
+        plt.show()
     # print(data.shape)
     # print(data[0].shape)
     # np_img = np.array(data[0])

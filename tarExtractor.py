@@ -5,7 +5,7 @@ Run this
 import os
 import tarfile
 
-data_file_name = "knee_singlecoil_test_v2.tar"
+data_file_name = "knee_singlecoil_val.tar"
 data_path = os.path.join("data", data_file_name)
 
 file_content = tarfile.open(data_path, 'r')
