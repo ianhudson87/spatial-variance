@@ -21,38 +21,31 @@ ifftshift = torch.fft.ifftshift
 ifft2 = torch.fft.ifft2
 ifftn = torch.fft.ifftn
 ifft = torch.fft.ifft
+fft = torch.fft.fft
 fftshift = torch.fft.fftshift
 
 for i, data in enumerate(data_loader):
     # data is batch
     for j in range(data.shape[0]):
-        kspace = data[0]
-        sample_mask = sampleMask.get_sample_mask(kspace.shape[0], kspace.shape[1], 0.5)
+        ground_truth = data[0]
+        kspace = fft(ground_truth)
+        sample_mask = sampleMask.get_sample_mask(kspace.shape[0], kspace.shape[1], 0.7)
         # print(kspace.shape)
         # print(sample_mask.shape)
         undersampled_kspace = kspace * sample_mask
-        print(undersampled_kspace.dtype)
+        undersampled_ground_truth = torch.absolute(ifft(undersampled_kspace))
 
-        image = torch.absolute(ifftshift(ifft2(fftshift(kspace))))
-        undersampled_image = torch.absolute(ifftshift(ifft2(fftshift(undersampled_kspace))))
+        # image = torch.absolute(ifftshift(ifft2(fftshift(kspace))))
+        # undersampled_image = torch.absolute(ifftshift(ifft2(fftshift(undersampled_kspace))))
 
         # test = torch.absolute(ifft2(kspace))
         # print(sample_mask)
+        print("new image")
         utils.imshow(sample_mask)
-
-        utils.imshow(image)
-
-        utils.imshow(undersampled_image)
-
-        print("set", j)
-
-        plt.figure()
-        plt.imshow(torch.absolute(kspace), cmap='gray')
-        plt.show()
-
-        plt.figure()
-        plt.imshow(torch.absolute(test), cmap='gray')
-        plt.show()
+        utils.imshow(ground_truth)
+        utils.imshow(torch.absolute(kspace))
+        utils.imshow(torch.absolute(undersampled_kspace))
+        utils.imshow(undersampled_ground_truth)
     # print(data.shape)
     # print(data[0].shape)
     # np_img = np.array(data[0])
