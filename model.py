@@ -6,12 +6,12 @@ import torch.nn.functional as F
 
 
 class UDVD(nn.Module):
-    def __init__(self):
+    def __init__(self, k, r):
         super().__init__()
         self.head = nn.Conv2d(19, 128, 3, 1, 1)
         body = [ResBlock(128, 3, 0.1) for _ in range(15)]
         self.body = nn.Sequential(*body)
-        self.UpDyConv = UpDynamicConv()
+        self.UpDyConv = UpDynamicConv(k, r)
         self.ComDyConv1 = CommonDynamicConv()
         self.ComDyConv2 = CommonDynamicConv()
 
@@ -119,7 +119,10 @@ class CommonDynamicConv(nn.Module):
 
 
 class UpDynamicConv(nn.Module):
-    def __init__(self):
+    # conv used to generate the dynamic kernel
+    def __init__(self, k, r):
+        # k = size of dynamic kernel
+        # r = upscaling rate
         super().__init__()
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, 3, 1, 1),
@@ -131,11 +134,11 @@ class UpDynamicConv(nn.Module):
         self.feat_residual = nn.Sequential(
             nn.Conv2d(160, 64, 3, 1, 1),
             nn.ReLU(inplace=True),
-            nn.PixelShuffle(upscale_factor=2),
+            nn.PixelShuffle(upscale_factor=r),
             nn.Conv2d(16, 3, 3, 1, 1)
         )
-        self.feat_kernel = nn.Conv2d(160, 25 * 4, 3, 1, 1)
-        self.pixel_conv = PixelConv(scale=2, depthwise=True)
+        self.feat_kernel = nn.Conv2d(160, k**2 * r**2, 3, 1, 1) # 160 = 32 + 128 = # channels from image_conv + # channels from feature maps, F
+        self.pixel_conv = PixelConv(scale=r, depthwise=True)
 
     def forward(self, image, features):
         image_conv = self.image_conv(image)
@@ -144,12 +147,14 @@ class UpDynamicConv(nn.Module):
         kernel = self.feat_kernel(cat_inputs)
         output = self.pixel_conv(image, kernel)
 
+        print(cat_inputs.size())
         residual = self.feat_residual(cat_inputs)
+        print(residual.size())
         return output + residual
 
 
 def demo():
-    net = UDVD()
+    net = UDVD(k=5, r=2) # TODO: Make this work for r=1
 
     inputs = torch.randn(1, 3, 64, 64)
     kernel = torch.randn(1, 15, 64, 64)
