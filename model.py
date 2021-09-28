@@ -12,8 +12,10 @@ class UDVD(nn.Module):
         body = [ResBlock(128, 3, 0.1) for _ in range(15)]
         self.body = nn.Sequential(*body)
         self.UpDyConv = UpDynamicConv(k, r)
-        self.ComDyConv1 = CommonDynamicConv()
-        self.ComDyConv2 = CommonDynamicConv()
+        # self.ComDyConv1 = UpDynamicConv(k, r=1)
+        # self.ComDyConv2 = UpDynamicConv(k, r=1)
+        self.ComDyConv1 = CommonDynamicConv(k)
+        self.ComDyConv2 = CommonDynamicConv(k)
 
     def forward(self, image, kernel, noise):
         assert image.size(1) == 3, 'Channels of Image should be 3, not {}'.format(image.size(1))
@@ -23,9 +25,8 @@ class UDVD(nn.Module):
         head = self.head(inputs)
         body = self.body(head) + head
         output1 = self.UpDyConv(image, body)
-        output2 = self.ComDyConv1(output1, body)
-        output3 = self.ComDyConv2(output2, body)
-        return output1, output2, output3
+        output2 = self.ComDyConv1(image, body)
+        return output1, output2
 
 
 class ResBlock(nn.Module):
@@ -81,7 +82,7 @@ class PixelConv(nn.Module):
 
 
 class CommonDynamicConv(nn.Module):
-    def __init__(self):
+    def __init__(self, k):
         super().__init__()
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, 3, 1, 1),
@@ -90,25 +91,16 @@ class CommonDynamicConv(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(16, 32, 3, 1, 1)
         )
-        # I'm not sure how to deal the feautre.
-        # Because it need to upsample the feature and align,
-        # but the paper not provide useful information about it, just provide
-        # Sub-pixel Convolution layer is used to align the resolutions between paths.
-        self.feat_conv = nn.Sequential(
-            nn.PixelShuffle(2),
-            nn.Conv2d(32, 128, 1)
-        )
         self.feat_residual = nn.Sequential(
             nn.Conv2d(160, 16, 3, 1, 1),
             nn.ReLU(inplace=True),
             nn.Conv2d(16, 3, 3, 1, 1)
         )
-        self.feat_kernel = nn.Conv2d(160, 25, 3, 1, 1)
+        self.feat_kernel = nn.Conv2d(160, k**2, 3, 1, 1)
         self.pixel_conv = PixelConv(scale=1, depthwise=True)
 
     def forward(self, image, features):
         image_conv = self.image_conv(image)
-        features = self.feat_conv(features)
         cat_inputs = torch.cat([image_conv, features], 1)
 
         kernel = self.feat_kernel(cat_inputs)
@@ -132,7 +124,7 @@ class UpDynamicConv(nn.Module):
             nn.Conv2d(16, 32, 3, 1, 1)
         )
         self.feat_residual = nn.Sequential(
-            nn.Conv2d(160, 64, 3, 1, 1),
+            nn.Conv2d(160, 16*(r**2), 3, 1, 1), # create enough channels so that when PixelShuffle happens we have 16 channels
             nn.ReLU(inplace=True),
             nn.PixelShuffle(upscale_factor=r),
             nn.Conv2d(16, 3, 3, 1, 1)
@@ -144,8 +136,8 @@ class UpDynamicConv(nn.Module):
         image_conv = self.image_conv(image)
         cat_inputs = torch.cat([image_conv, features], 1)
 
-        kernel = self.feat_kernel(cat_inputs)
-        output = self.pixel_conv(image, kernel)
+        kernel = self.feat_kernel(cat_inputs) # generated per-pixel kernel
+        output = self.pixel_conv(image, kernel) # applying per-pixel kernel to original image
 
         print(cat_inputs.size())
         residual = self.feat_residual(cat_inputs)
@@ -154,18 +146,17 @@ class UpDynamicConv(nn.Module):
 
 
 def demo():
-    net = UDVD(k=5, r=2) # TODO: Make this work for r=1
+    net = UDVD(k=5, r=3) # TODO: Make this work for r=1
 
     inputs = torch.randn(1, 3, 64, 64)
     kernel = torch.randn(1, 15, 64, 64)
     noise = torch.randn(1, 1, 64, 64)
 
     with torch.no_grad():
-        output1, output2, output3 = net(inputs, kernel, noise)
+        output1, output2 = net(inputs, kernel, noise)
 
     print(output1.size())
     print(output2.size())
-    print(output3.size())
 
 
 if __name__ == '__main__':
