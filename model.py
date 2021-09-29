@@ -6,24 +6,46 @@ import torch.nn.functional as F
 
 
 class UDVD(nn.Module):
-    def __init__(self, k, r):
+    def __init__(self, k, in_channels):
+        # k = size of dynamic kernel
         super().__init__()
-        self.head = nn.Conv2d(19, 128, 3, 1, 1)
+        self.in_channels = in_channels
+        self.head = nn.Conv2d(16 + in_channels, 128, 3, 1, 1)
         body = [ResBlock(128, 3, 0.1) for _ in range(15)]
         self.body = nn.Sequential(*body)
-        # self.UpDyConv = UpDynamicConv(k, r)
-        self.ComDyConv1 = CommonDynamicConv(k)
+        self.ComDyConv1 = CommonDynamicConv(k, in_channels)
 
     def forward(self, image, kernel, noise):
-        assert image.size(1) == 3, 'Channels of Image should be 3, not {}'.format(image.size(1))
+        assert image.size(1) == self.in_channels, 'Channels of Image should be in_channels, not {}'.format(image.size(1))
         assert kernel.size(1) == 15, 'Channels of kernel should be 15, not {}'.format(kernel.size(1))
         assert noise.size(1) == 1, 'Channels of noise should be 1, not {}'.format(noise.size(1))
         inputs = torch.cat([image, kernel, noise], 1)
         head = self.head(inputs)
         body = self.body(head) + head
-        # output1 = self.UpDyConv(image, body)
         output2 = self.ComDyConv1(image, body)
         return  output2
+
+class UDVD_upscale(nn.Module):
+    def __init__(self, k, r, in_channels):
+        # k = size of dynamic kernel
+        # r = upscaling rate
+        super().__init__()
+        self.in_channels = in_channels
+        self.head = nn.Conv2d(16 + in_channels, 128, 3, 1, 1)
+        body = [ResBlock(128, 3, 0.1) for _ in range(15)]
+        self.body = nn.Sequential(*body)
+        # self.UpDyConv = UpDynamicConv(k, r, in_channels)
+        self.ComDyConv1 = CommonDynamicConv(k, in_channels)
+
+    def forward(self, image, kernel, noise):
+        assert image.size(1) == self.in_channels, 'Channels of Image should be in_channels, not {}'.format(image.size(1))
+        assert kernel.size(1) == 15, 'Channels of kernel should be 15, not {}'.format(kernel.size(1))
+        assert noise.size(1) == 1, 'Channels of noise should be 1, not {}'.format(noise.size(1))
+        inputs = torch.cat([image, kernel, noise], 1)
+        head = self.head(inputs)
+        body = self.body(head) + head
+        output1 = self.UpDyConv(image, body)
+        return  output1
 
 
 class ResBlock(nn.Module):
@@ -79,10 +101,10 @@ class PixelConv(nn.Module):
 
 
 class CommonDynamicConv(nn.Module):
-    def __init__(self, k):
+    def __init__(self, k, in_channels):
         super().__init__()
         self.image_conv = nn.Sequential(
-            nn.Conv2d(3, 16, 3, 1, 1),
+            nn.Conv2d(in_channels, 16, 3, 1, 1),
             nn.ReLU(inplace=True),
             nn.Conv2d(16, 16, 3, 1, 1),
             nn.ReLU(inplace=True),
@@ -109,12 +131,11 @@ class CommonDynamicConv(nn.Module):
 
 class UpDynamicConv(nn.Module):
     # conv used to generate the dynamic kernel
-    def __init__(self, k, r):
-        # k = size of dynamic kernel
-        # r = upscaling rate
+    def __init__(self, k, r, in_channels):
+
         super().__init__()
         self.image_conv = nn.Sequential(
-            nn.Conv2d(3, 16, 3, 1, 1),
+            nn.Conv2d(in_channels, 16, 3, 1, 1),
             nn.ReLU(inplace=True),
             nn.Conv2d(16, 16, 3, 1, 1),
             nn.ReLU(inplace=True),
@@ -143,7 +164,7 @@ class UpDynamicConv(nn.Module):
 def demo():
     net = UDVD(k=5, r=1) # TODO: Make this work for r=1
 
-    inputs = torch.randn(1, 3, 64, 64)
+    inputs = torch.randn(1, 1, 64, 64)
     kernel = torch.randn(1, 15, 64, 64)
     noise = torch.randn(1, 1, 64, 64)
 
