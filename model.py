@@ -11,11 +11,8 @@ class UDVD(nn.Module):
         self.head = nn.Conv2d(19, 128, 3, 1, 1)
         body = [ResBlock(128, 3, 0.1) for _ in range(15)]
         self.body = nn.Sequential(*body)
-        self.UpDyConv = UpDynamicConv(k, r)
-        # self.ComDyConv1 = UpDynamicConv(k, r=1)
-        # self.ComDyConv2 = UpDynamicConv(k, r=1)
+        # self.UpDyConv = UpDynamicConv(k, r)
         self.ComDyConv1 = CommonDynamicConv(k)
-        self.ComDyConv2 = CommonDynamicConv(k)
 
     def forward(self, image, kernel, noise):
         assert image.size(1) == 3, 'Channels of Image should be 3, not {}'.format(image.size(1))
@@ -24,9 +21,9 @@ class UDVD(nn.Module):
         inputs = torch.cat([image, kernel, noise], 1)
         head = self.head(inputs)
         body = self.body(head) + head
-        output1 = self.UpDyConv(image, body)
+        # output1 = self.UpDyConv(image, body)
         output2 = self.ComDyConv1(image, body)
-        return output1, output2
+        return  output2
 
 
 class ResBlock(nn.Module):
@@ -139,23 +136,20 @@ class UpDynamicConv(nn.Module):
         kernel = self.feat_kernel(cat_inputs) # generated per-pixel kernel
         output = self.pixel_conv(image, kernel) # applying per-pixel kernel to original image
 
-        print(cat_inputs.size())
         residual = self.feat_residual(cat_inputs)
-        print(residual.size())
         return output + residual
 
 
 def demo():
-    net = UDVD(k=5, r=3) # TODO: Make this work for r=1
+    net = UDVD(k=5, r=1) # TODO: Make this work for r=1
 
     inputs = torch.randn(1, 3, 64, 64)
     kernel = torch.randn(1, 15, 64, 64)
     noise = torch.randn(1, 1, 64, 64)
 
     with torch.no_grad():
-        output1, output2 = net(inputs, kernel, noise)
+        output2 = net(inputs, kernel, noise)
 
-    print(output1.size())
     print(output2.size())
 
 

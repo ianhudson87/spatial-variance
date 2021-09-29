@@ -14,4 +14,17 @@ def get_sample_mask(h, w, p):
         mask[:, column] = 1
 
     return mask
-    # print(mask)
+
+def get_batch_sample_mask(h, w, p, batch_size):
+    # take columns at random
+    # h=height, w=width, p=percent of columns chosen, batch_size
+    num_mask_columns = int(w*p) # number of columns to choose
+    mask = torch.zeros(batch_size, h, w)
+
+    for batch in range(batch_size):
+        columns_chosen = random.sample(range(w), num_mask_columns) # columns from left side of image, need to also take the mirror column
+        # print(columns_chosen)
+        for column in columns_chosen:
+            mask[batch, :, column] = 1
+
+    return mask

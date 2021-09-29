@@ -33,8 +33,8 @@ class Dataset(torch.utils.data.Dataset):
         h5f.close()
         return data_torch
 
-def get_dataloader(h5_path, img_type):
+def get_dataloader(h5_path, img_type, batch_size):
     # create a torch dataloader from a h5 file
     dataset = Dataset(train_file=h5_path, img_type=img_type)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=False)
+    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False)
     return loader
