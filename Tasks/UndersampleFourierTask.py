@@ -9,21 +9,25 @@ fft = torch.fft.fft
 fftshift = torch.fft.fftshift
 
 class UndersampleFourierTask:
-    def __init__(self, sample_percent, batch_size):
+    def __init__(self, sample_percent):
         print("Using Undersampling Fourier Space task!")
         self.sample_percent = sample_percent
-        self.batch_size = batch_size
 
     def get_deconstructed(self, data):
+        batch_size = data.size()[0]
         batch_kspace = fft(data) # move to fourier space
         h = batch_kspace.shape[-2]
         w = batch_kspace.shape[-1]
-        batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, self.batch_size) # generate mask for fourier space
-        
+        batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size) # generate mask for fourier space
+        if torch.cuda.is_available():
+            batch_sample_mask = batch_sample_mask.cuda()
+
         undersampled_batch_kspace = batch_kspace * batch_sample_mask
 
         undersampled_batch_image = torch.absolute(ifft(undersampled_batch_kspace))
-        inputs = undersampled_batch_image
-        kernel = torch.zeros(self.batch_size, 15, h, w)
-        noise = torch.zeros(self.batch_size, 1, h, w)
-        return inputs, kernel, noise
+        kernel = torch.zeros(batch_size, 15, h, w)
+        noise = torch.zeros(batch_size, 1, h, w)
+        if torch.cuda.is_available():
+            kernel = kernel.cuda()
+            noise = noise.cuda()
+        return undersampled_batch_image, kernel, noise

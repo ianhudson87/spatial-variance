@@ -46,7 +46,7 @@ for j in range(len(h5_files)):
         max_pixel_val = max(max_pixel_val, torch.max(data))
 
 # Defining the task to solve
-task = UF.UndersampleFourierTask(opt["sample_percent"], opt["batch_size"])
+task = UF.UndersampleFourierTask(opt["sample_percent"])
 
 step=0
 
@@ -60,6 +60,8 @@ for epoch in range(opt["epochs"]):
         for i, data in enumerate(data_loader):
             step += 1
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data, apply normalization across all data
+            if torch.cuda.is_available():
+                ground_truth = ground_truth.cuda()
             # data is batch of ground truth images
 
             #####################################
@@ -67,11 +69,11 @@ for epoch in range(opt["epochs"]):
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
             #####################################
 
-            if torch.cuda.is_available():
-                inputs = inputs.cuda()
-                kernel = kernel.cuda()
-                noise = noise.cuda()
-                ground_truth = ground_truth.cuda()
+            #if torch.cuda.is_available():
+            #    inputs = inputs.cuda()
+            #    kernel = kernel.cuda()
+            #    noise = noise.cuda()
+            #    ground_truth = ground_truth.cuda()
             #print(torch.cuda.is_available())
             #print(type(inputs), type(kernel), type(noise))
             net.train()
@@ -96,16 +98,17 @@ for epoch in range(opt["epochs"]):
 
         for l, data in enumerate(data_loader):
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
-
+            if torch.cuda.is_availabe():
+                ground_truth = ground_truth.cuda()
             #####################################
             # Applying deconstruction to image
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
             #####################################
-            if torch.cuda.is_available():
-                inputs = inputs.cuda()
-                kernel = kernel.cuda()
-                noise = noise.cuda()
-                ground_truth = ground_truth.cuda()
+            #if torch.cuda.is_available():
+            #    inputs = inputs.cuda()
+            #    kernel = kernel.cuda()
+            #    noise = noise.cuda()
+            #    ground_truth = ground_truth.cuda()
 
             net.eval()
             y_pred = net(inputs, kernel, noise)
