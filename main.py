@@ -30,7 +30,6 @@ optimizer = optim.Adam(net.parameters(), lr=opt["lr"])
 if torch.cuda.is_available():
     net.cuda()
     criterion.cuda()
-    optimizer.cuda()
 
 # Tensorboard
 writer = SummaryWriter(log_dir=opt["out_folder"])
