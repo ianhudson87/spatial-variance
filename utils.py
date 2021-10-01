@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import json
 import numpy as np
-from skimage.measure.simple_metrics import compare_psnr
+from skimage.measure import compare_psnr
 from skimage.metrics import peak_signal_noise_ratio
 from datetime import datetime
 
