@@ -19,6 +19,8 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 
 opt = utils.get_options()
+opt["out_folder"] = "./runs/" + utils.get_date_time()
+
 
 # creating model
 net = model.UDVD(k=5, in_channels=1, depth=5)
@@ -48,62 +50,69 @@ for j in range(len(h5_files)):
 task = UF.UndersampleFourierTask(opt["sample_percent"], opt["batch_size"])
 
 # Training
-for j in range(len(h5_files_train)):
-    # getting data loader
-    data_loader = dataReader.get_dataloader(h5_files_train[j], 'reconstruction_rss', opt["batch_size"])
+for epoch in range(opt["epochs"]):
+    for j in range(len(h5_files_train)):
+        # getting data loader
+        data_loader = dataReader.get_dataloader(h5_files_train[j], 'reconstruction_rss', opt["batch_size"])
 
-    # training
-    for i, data in enumerate(data_loader):
-        ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data, apply normalization across all data
-        # data is batch of ground truth images
+        # training
+        for i, data in enumerate(data_loader):
+            ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data, apply normalization across all data
+            # data is batch of ground truth images
 
-        #####################################
-        # Applying deconstruction to image
-        inputs, kernel, noise = task.get_deconstructed(ground_truth)
-        #####################################
+            #####################################
+            # Applying deconstruction to image
+            inputs, kernel, noise = task.get_deconstructed(ground_truth)
+            #####################################
 
-        if torch.cuda.is_available():
-            inputs.cuda()
-            kernel.cuda()
-            noise.cuda()
+            if torch.cuda.is_available():
+                inputs.cuda()
+                kernel.cuda()
+                noise.cuda()
 
-        net.train()
-        net.zero_grad()
-        optimizer.zero_grad()
-        y_pred = net(inputs, kernel, noise)
-        loss = criterion(y_pred, ground_truth)
-        loss.backward()
-        optimizer.step()
+            net.train()
+            net.zero_grad()
+            optimizer.zero_grad()
+            y_pred = net(inputs, kernel, noise)
+            loss = criterion(y_pred, ground_truth)
+            loss.backward()
+            optimizer.step()
 
-        y_pred = torch.clamp(y_pred, 0., 1.)
-        batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
-        writer.add_scalar("train_loss", loss.item())
-        writer.add_scalar("batch_psnr", batch_psnr)
+            y_pred = torch.clamp(y_pred, 0., 1.)
+            batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
+            writer.add_scalar("train_loss", loss.item())
+            writer.add_scalar("batch_psnr", batch_psnr)
 
-# Validation 
-total_psnr = 0
-batches = 0
-for k in range(len(h5_files_val)):
-    data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', opt["batch_size"])
+    # Validation 
+    total_psnr = 0
+    batches = 0
+    for k in range(len(h5_files_val)):
+        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', opt["batch_size"])
 
-    for l, data in enumerate(data_loader):
-        ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
+        for l, data in enumerate(data_loader):
+            ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
 
-        #####################################
-        # Applying deconstruction to image
-        inputs, kernel, noise = task.get_deconstructed(ground_truth)
-        #####################################
-        if torch.cuda.is_available():
-            inputs.cuda()
-            kernel.cuda()
-            noise.cuda()
+            #####################################
+            # Applying deconstruction to image
+            inputs, kernel, noise = task.get_deconstructed(ground_truth)
+            #####################################
+            if torch.cuda.is_available():
+                inputs.cuda()
+                kernel.cuda()
+                noise.cuda()
 
-        net.eval()
-        y_pred = net(inputs, kernel, noise)
-        loss = criterion(y_pred, ground_truth)
+            net.eval()
+            y_pred = net(inputs, kernel, noise)
+            loss = criterion(y_pred, ground_truth)
 
-        y_pred = torch.clamp(y_pred, 0., 1.)
-        batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
-        batches += 1
-        writer.add_scalar("val_loss", loss.item())
-writer.add_scalar("val_psnr", total_psnr / batches)
+            y_pred = torch.clamp(y_pred, 0., 1.)
+            batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
+            batches += 1
+            writer.add_scalar("val_loss", loss.item())
+    writer.add_scalar("val_psnr", total_psnr / batches)
+
+    
+    torch.save({
+        'net': net.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }, os.path.join(out_file, 'net%d.pth' % (epoch+1)))
