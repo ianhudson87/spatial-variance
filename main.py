@@ -68,10 +68,12 @@ for epoch in range(opt["epochs"]):
             #####################################
 
             if torch.cuda.is_available():
-                inputs.cuda()
-                kernel.cuda()
-                noise.cuda()
-
+                inputs = inputs.cuda()
+                kernel = kernel.cuda()
+                noise = noise.cuda()
+                ground_truth = ground_truth.cuda()
+            #print(torch.cuda.is_available())
+            #print(type(inputs), type(kernel), type(noise))
             net.train()
             net.zero_grad()
             optimizer.zero_grad()
@@ -100,9 +102,10 @@ for epoch in range(opt["epochs"]):
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
             #####################################
             if torch.cuda.is_available():
-                inputs.cuda()
-                kernel.cuda()
-                noise.cuda()
+                inputs = inputs.cuda()
+                kernel = kernel.cuda()
+                noise = noise.cuda()
+                ground_truth = ground_truth.cuda()
 
             net.eval()
             y_pred = net(inputs, kernel, noise)
