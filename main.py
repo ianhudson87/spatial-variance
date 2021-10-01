@@ -33,7 +33,7 @@ if torch.cuda.is_available():
     optimizer.cuda()
 
 # Tensorboard
-writer = SummaryWriter(log_dir="./runs")
+writer = SummaryWriter(log_dir=opt["out_folder"])
 
 # Getting data
 data_path = os.path.join("data", opt["data_folder_name"])
@@ -115,4 +115,4 @@ for epoch in range(opt["epochs"]):
     torch.save({
         'net': net.state_dict(),
         'optimizer': optimizer.state_dict()
-    }, os.path.join(out_file, 'net%d.pth' % (epoch+1)))
+    }, os.path.join(opt["out_folder"], 'net%d.pth' % (epoch+1)))
