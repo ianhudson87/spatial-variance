@@ -11,17 +11,34 @@ import torch.optim as optim
 from tensorboardX import SummaryWriter
 import utils
 import model
+import sys
 import Tasks.UndersampleFourierTask as UF
 import Tasks.VariableNoiseTask as VN
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
 # print(torch.cuda.current_device())
 # print(torch.cuda.device_count())
 
+# argument variables
+task_names = ["undersample", "vnoise"]
+print(sys.argv)
+print(type(sys.argv[1]))
+print('vnoise' in task_names)
+if len(sys.argv) != 3 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric:
+    sys.exit("Usage: main.py [task] [gpu #] task={undersample, vnoise}")
+task_name = sys.argv[1]
 
-opt = utils.get_options()
-opt["out_folder"] = "./runs/" + utils.get_date_time()
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 
+# get options
+opt = utils.get_options(f"./task_configs/{task_name}_options.json")
+opt["out_folder"] = "./runs/" + opt["model_name"] + utils.get_date_time()
+
+# Defining the task to solve
+task_index = task_names.index(task_name)
+if task_index==0:
+    task = UF.UndersampleFourierTask(opt["sample_percent"])
+elif task_index==1:
+    task = VN.VariableNoiseTask(20, 50, 20)
 
 # creating model
 net = model.UDVD(k=5, in_channels=1, depth=5)
@@ -46,10 +63,6 @@ for j in range(len(h5_files)):
     for i, data in enumerate(data_loader):
         max_pixel_val = max(max_pixel_val, torch.max(data))
 
-# Defining the task to solve
-task = UF.UndersampleFourierTask(opt["sample_percent"])
-# task = VN.VariableNoiseTask(20, 50, 20)
-
 step=0
 
 # Training
@@ -61,7 +74,9 @@ for epoch in range(opt["epochs"]):
         # training
         for i, data in enumerate(data_loader):
             step += 1
-            ground_truth = (torch.unsqueeze(data, 1)/max_pixel_val).cuda() # add channel dimension to data, apply normalization across all data
+            ground_truth = (torch.unsqueeze(data, 1)/max_pixel_val) # add channel dimension to data, apply normalization across all data
+            if torch.cuda.is_available():
+                ground_truth = ground_truth.cuda()
             # data is batch of ground truth images
 
             #####################################
@@ -91,7 +106,8 @@ for epoch in range(opt["epochs"]):
 
         for l, data in enumerate(data_loader):
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
-
+            if torch.cuda.is_available():
+                ground_truth = ground_truth.cuda()
             #####################################
             # Applying deconstruction to image
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
@@ -103,6 +119,7 @@ for epoch in range(opt["epochs"]):
 
             y_pred = torch.clamp(y_pred, 0., 1.)
             batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
+            total_psnr += batch_psnr
             batches += 1
             # writer.add_scalar("val_loss", loss.item(), epoch)
     writer.add_scalar("val_psnr", total_psnr / batches, epoch)
