@@ -12,6 +12,7 @@ from tensorboardX import SummaryWriter
 import utils
 import model
 import Tasks.UndersampleFourierTask as UF
+import Tasks.VariableNoiseTask as VN
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 # print(torch.cuda.current_device())
@@ -47,6 +48,7 @@ for j in range(len(h5_files)):
 
 # Defining the task to solve
 task = UF.UndersampleFourierTask(opt["sample_percent"])
+# task = VN.VariableNoiseTask(20, 50, 20)
 
 step=0
 
@@ -60,8 +62,6 @@ for epoch in range(opt["epochs"]):
         for i, data in enumerate(data_loader):
             step += 1
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data, apply normalization across all data
-            if torch.cuda.is_available():
-                ground_truth = ground_truth.cuda()
             # data is batch of ground truth images
 
             #####################################
@@ -69,13 +69,6 @@ for epoch in range(opt["epochs"]):
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
             #####################################
 
-            #if torch.cuda.is_available():
-            #    inputs = inputs.cuda()
-            #    kernel = kernel.cuda()
-            #    noise = noise.cuda()
-            #    ground_truth = ground_truth.cuda()
-            #print(torch.cuda.is_available())
-            #print(type(inputs), type(kernel), type(noise))
             net.train()
             net.zero_grad()
             optimizer.zero_grad()
@@ -86,8 +79,8 @@ for epoch in range(opt["epochs"]):
 
             y_pred = torch.clamp(y_pred, 0., 1.)
             batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
-            writer.add_scalar("train_loss", loss.item())
-            writer.add_scalar("batch_psnr", batch_psnr)
+            writer.add_scalar("train_loss", loss.item(), step)
+            writer.add_scalar("batch_psnr", batch_psnr, step)
             print(f"epoch: {epoch}, step: {step}, loss: {loss.item()}, psnr: {batch_psnr}")
 
     # Validation 
@@ -98,27 +91,21 @@ for epoch in range(opt["epochs"]):
 
         for l, data in enumerate(data_loader):
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
-            if torch.cuda.is_availabe():
-                ground_truth = ground_truth.cuda()
+
             #####################################
             # Applying deconstruction to image
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
             #####################################
-            #if torch.cuda.is_available():
-            #    inputs = inputs.cuda()
-            #    kernel = kernel.cuda()
-            #    noise = noise.cuda()
-            #    ground_truth = ground_truth.cuda()
 
             net.eval()
             y_pred = net(inputs, kernel, noise)
-            loss = criterion(y_pred, ground_truth)
+            # loss = criterion(y_pred, ground_truth)
 
             y_pred = torch.clamp(y_pred, 0., 1.)
             batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             batches += 1
-            writer.add_scalar("val_loss", loss.item())
-    writer.add_scalar("val_psnr", total_psnr / batches)
+            # writer.add_scalar("val_loss", loss.item(), epoch)
+    writer.add_scalar("val_psnr", total_psnr / batches, epoch)
     print(f"Validation: epoch: {epoch}, psnr: {total_psnr / batches}")
 
     

@@ -14,10 +14,13 @@ class UndersampleFourierTask:
         self.sample_percent = sample_percent
 
     def get_deconstructed(self, data):
+        if torch.cuda.is_available():
+            data = data.cuda()
+        h = data.shape[-2]
+        w = data.shape[-1]
         batch_size = data.size()[0]
+        
         batch_kspace = fft(data) # move to fourier space
-        h = batch_kspace.shape[-2]
-        w = batch_kspace.shape[-1]
         batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size) # generate mask for fourier space
         if torch.cuda.is_available():
             batch_sample_mask = batch_sample_mask.cuda()
