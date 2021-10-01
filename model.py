@@ -22,7 +22,6 @@ class UDVD(nn.Module):
         inputs = torch.cat([image, kernel, noise], 1)
         head = self.head(inputs)
         body = self.body(head) + head
-        print("here", body.shape)
         output2 = self.ComDyConv1(image, body)
         return  output2
 
@@ -121,17 +120,12 @@ class CommonDynamicConv(nn.Module):
 
     def forward(self, image, features):
         image_conv = self.image_conv(image)
-        print("here2", image_conv.shape)
         cat_inputs = torch.cat([image_conv, features], 1)
-        print("here3", cat_inputs.shape)
 
         kernel = self.feat_kernel(cat_inputs)
-        print("here4", kernel.shape)
         output = self.pixel_conv(image, kernel)
-        print("here6", output.shape)
 
         residual = self.feat_residual(cat_inputs)
-        print("here5", residual.shape)
         return output + residual
 
 

@@ -37,6 +37,12 @@ writer = SummaryWriter(log_dir="./runs")
 data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_split"])
+# Getting max pixel value of all data to normalize data
+max_pixel_val = 0
+for j in range(len(h5_files)):
+    data_loader = dataReader.get_dataloader(h5_files[j], 'reconstruction_rss', opt["batch_size"])
+    for i, data in enumerate(data_loader):
+        max_pixel_val = max(max_pixel_val, torch.max(data))
 
 # Defining the task to solve
 task = UF.UndersampleFourierTask(opt["sample_percent"], opt["batch_size"])
@@ -48,7 +54,7 @@ for j in range(len(h5_files_train)):
 
     # training
     for i, data in enumerate(data_loader):
-        ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
+        ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data, apply normalization across all data
         # data is batch of ground truth images
 
         #####################################
@@ -69,16 +75,19 @@ for j in range(len(h5_files_train)):
         loss.backward()
         optimizer.step()
 
-        print("MAX", torch.max(y_pred), torch.max(ground_truth))
+        y_pred = torch.clamp(y_pred, 0., 1.)
         batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
         writer.add_scalar("train_loss", loss.item())
+        writer.add_scalar("batch_psnr", batch_psnr)
 
 # Validation 
+total_psnr = 0
+batches = 0
 for k in range(len(h5_files_val)):
     data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', opt["batch_size"])
 
     for l, data in enumerate(data_loader):
-        ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
+        ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
 
         #####################################
         # Applying deconstruction to image
@@ -93,5 +102,8 @@ for k in range(len(h5_files_val)):
         y_pred = net(inputs, kernel, noise)
         loss = criterion(y_pred, ground_truth)
 
-
+        y_pred = torch.clamp(y_pred, 0., 1.)
+        batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
+        batches += 1
         writer.add_scalar("val_loss", loss.item())
+writer.add_scalar("val_psnr", total_psnr / batches)

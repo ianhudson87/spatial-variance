@@ -15,7 +15,7 @@ class Dataset(torch.utils.data.Dataset):
 
         # get number of images
         h5f = h5py.File(self.train_file, 'r')
-        print("here", h5f.keys())
+        # print("here", h5f.keys())
         h5d = h5f[self.img_type] # h5 dataset of the images
         self.num_images = h5d.len()
         h5f.close()
