@@ -49,6 +49,8 @@ for j in range(len(h5_files)):
 # Defining the task to solve
 task = UF.UndersampleFourierTask(opt["sample_percent"], opt["batch_size"])
 
+step=0
+
 # Training
 for epoch in range(opt["epochs"]):
     for j in range(len(h5_files_train)):
@@ -57,6 +59,7 @@ for epoch in range(opt["epochs"]):
 
         # training
         for i, data in enumerate(data_loader):
+            step += 1
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data, apply normalization across all data
             # data is batch of ground truth images
 
@@ -82,6 +85,7 @@ for epoch in range(opt["epochs"]):
             batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             writer.add_scalar("train_loss", loss.item())
             writer.add_scalar("batch_psnr", batch_psnr)
+            print(f"epoch: {epoch}, step: {step}, loss: {loss.item()}, psnr: {batch_psnr}")
 
     # Validation 
     total_psnr = 0
@@ -110,6 +114,7 @@ for epoch in range(opt["epochs"]):
             batches += 1
             writer.add_scalar("val_loss", loss.item())
     writer.add_scalar("val_psnr", total_psnr / batches)
+    print(f"Validation: epoch: {epoch}, psnr: {total_psnr / batches}")
 
     
     torch.save({
