@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import json
 import numpy as np
-from skimage.measure import compare_psnr
 from skimage.metrics import peak_signal_noise_ratio
 from datetime import datetime
 
@@ -31,4 +30,8 @@ def batch_PSNR(img, imclean, data_range):
 
 def get_date_time():
     dateTimeObj = datetime.now()
+<<<<<<< HEAD
     str(dateTimeObj.month) + "-" + str(dateTimeObj.day) + "--" + str((dateTimeObj.hour-5)%24) + "-" + str(dateTimeObj.minute)
+=======
+    return str(dateTimeObj.month) + "-" + str(dateTimeObj.day) + "-" + str((dateTimeObj.hour-5)%24) + "-" + str(dateTimeObj.minute)
+>>>>>>> 427e5fd3f09a8975f0fd2a4bce70011c92e4e8a0
