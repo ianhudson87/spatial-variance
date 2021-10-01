@@ -26,5 +26,4 @@ class UndersampleFourierTask:
         inputs = undersampled_batch_image
         kernel = torch.zeros(self.batch_size, 15, h, w)
         noise = torch.zeros(self.batch_size, 1, h, w)
-        print("HERE", inputs.shape, kernel.shape, noise.shape)
         return inputs, kernel, noise
