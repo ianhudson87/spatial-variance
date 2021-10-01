@@ -14,14 +14,12 @@ import model
 import sys
 import Tasks.UndersampleFourierTask as UF
 import Tasks.VariableNoiseTask as VN
+torch.set_num_threads(1)
 # print(torch.cuda.current_device())
 # print(torch.cuda.device_count())
 
 # argument variables
 task_names = ["undersample", "vnoise"]
-print(sys.argv)
-print(type(sys.argv[1]))
-print('vnoise' in task_names)
 if len(sys.argv) != 3 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric:
     sys.exit("Usage: main.py [task] [gpu #] task={undersample, vnoise}")
 task_name = sys.argv[1]
@@ -70,7 +68,7 @@ for epoch in range(opt["epochs"]):
     for j in range(len(h5_files_train)):
         # getting data loader
         data_loader = dataReader.get_dataloader(h5_files_train[j], 'reconstruction_rss', opt["batch_size"])
-
+        
         # training
         for i, data in enumerate(data_loader):
             step += 1
@@ -100,10 +98,10 @@ for epoch in range(opt["epochs"]):
 
     # Validation 
     total_psnr = 0
-    batches = 0
+    batches = 1
     for k in range(len(h5_files_val)):
         data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', opt["batch_size"])
-
+        
         for l, data in enumerate(data_loader):
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
             if torch.cuda.is_available():
