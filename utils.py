@@ -5,6 +5,7 @@ from skimage.metrics import peak_signal_noise_ratio
 from datetime import datetime
 import cv2
 import os
+from pathlib import Path
 
 def imshow(img):
     plt.figure()
@@ -36,6 +37,8 @@ def get_date_time():
 
 def save_image(img, folder, name):
     # for greyscale image only, batch_size=1
+    path = os.path.join("./test_logs", folder)
+    Path(path).mkdir(parents=True, exist_ok=True) # create directory if doesn't exist
     np_image = np.array(img.cpu())[0]
     np_image = np.swapaxes(np.swapaxes(np_image, 0, 2), 0, 1)*256
-    cv2.imwrite(os.path.join("./test_logs", folder, name+".jpeg"), np_image)
+    cv2.imwrite(os.path.join(path, name+".tif"), np_image)
