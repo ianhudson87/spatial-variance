@@ -9,12 +9,10 @@ import model
 import torch
 import torch.nn as nn
 import torch.optim as optim
+torch.set_num_threads(1)
 
 # argument variables
 task_names = ["undersample", "vnoise"]
-print(sys.argv)
-print(type(sys.argv[1]))
-print('vnoise' in task_names)
 if len(sys.argv) != 5 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric:
     sys.exit("Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] task={undersample, vnoise}")
 task_name = sys.argv[1]
@@ -39,8 +37,12 @@ elif task_index==1:
 net = model.UDVD(k=5, in_channels=1, depth=5)
 criterion = nn.MSELoss()
 
+if torch.cuda.is_available():
+    net.cuda()
+    criterion.cuda()
+
 # load the checkpoint
-checkpoint = torch.load(f'./logs/{checkpoint_name}/net{epoch}.pth')
+checkpoint = torch.load(f'./runs/{checkpoint_name}/net{epoch}.pth')
 net.load_state_dict(checkpoint['net'])
 
 # Getting data
@@ -68,14 +70,14 @@ for k in range(len(h5_files_val)):
             # Applying deconstruction to image
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
             #####################################
-
             net.eval()
             y_pred = net(inputs, kernel, noise)
             # loss = criterion(y_pred, ground_truth)
-
-            y_pred = torch.clamp(y_pred, 0., 1.)
-            utils.save_image(ground_truth, checkpoint_name, str(step)+"_groundtruth")
-            utils.save_image(inputs, checkpoint_name, str(step)+"_noisy")
-            utils.save_image(y_pred, checkpoint_name, str(step)+"_reconstructed")
+            
+            with torch.no_grad():
+                y_pred = torch.clamp(y_pred, 0., 1.)
+                utils.save_image(ground_truth, checkpoint_name, str(step)+"_groundtruth")
+                utils.save_image(inputs, checkpoint_name, str(step)+"_noisy")
+                utils.save_image(y_pred, checkpoint_name, str(step)+"_reconstructed")
             # batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             # writer.add_scalar("val_loss", loss.item(), epoch)
