@@ -1,5 +1,6 @@
 import sampleMask
 import torch
+import utils
 
 ifftshift = torch.fft.ifftshift
 ifft2 = torch.fft.ifft2
@@ -24,6 +25,8 @@ class UndersampleFourierTask:
         batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size) # generate mask for fourier space
         if torch.cuda.is_available():
             batch_sample_mask = batch_sample_mask.cuda()
+
+        utils.imshow(batch_sample_mask[0][0])
 
         undersampled_batch_kspace = batch_kspace * batch_sample_mask
 
