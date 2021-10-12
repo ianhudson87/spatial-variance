@@ -26,7 +26,7 @@ class UndersampleFourierTask:
         if torch.cuda.is_available():
             batch_sample_mask = batch_sample_mask.cuda()
 
-        utils.imshow(batch_sample_mask[0][0])
+        # utils.imshow(batch_sample_mask[0][0])
 
         undersampled_batch_kspace = batch_kspace * batch_sample_mask
 
