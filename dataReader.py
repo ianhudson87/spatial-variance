@@ -25,9 +25,12 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         h5f = h5py.File(self.train_file, 'r')
-        h5d = h5f[self.img_type]
+        # h5d = h5f[self.img_type]
+        # print(self.train_file)
+        # print("regular", h5d)
+        # print("new", self.h5d)
         # print(type(h5d[0]))
-        data_np = h5d[index] # np array (dtype=complex64)
+        data_np = h5f[self.img_type][index] # np array (dtype=complex64)
         # print(data_np.dtype)
         data_torch = torch.from_numpy(data_np)
         h5f.close()
