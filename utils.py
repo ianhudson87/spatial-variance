@@ -18,9 +18,12 @@ def get_options(options_file = "options.json"):
         return data
 
 def train_val_split(files, train_frac):
-    split_point = int(len(files)*train_frac)
+    split_point = int((len(files)-1)*train_frac) # save one file for testing
     print("SPLIT POINT", split_point)
-    return files[:split_point], files[split_point:]
+    return files[:split_point], files[split_point:-1]
+
+def get_testing_data(files):
+    return [files[-1]]
 
 def batch_PSNR(img, imclean, data_range):
     Img = img.data.cpu().numpy().astype(np.float32)

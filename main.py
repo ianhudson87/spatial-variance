@@ -60,6 +60,7 @@ for j in range(len(h5_files)):
     data_loader = dataReader.get_dataloader(h5_files[j], 'reconstruction_rss', opt["batch_size"])
     for i, data in enumerate(data_loader):
         max_pixel_val = max(max_pixel_val, torch.max(data))
+    
 
 step=0
 

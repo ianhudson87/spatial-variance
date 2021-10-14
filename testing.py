@@ -48,7 +48,7 @@ net.load_state_dict(checkpoint['net'])
 # Getting data
 data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
-h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_split"])
+h5_files_test = utils.get_testing_data(h5_files)
 # Getting max pixel value of all data to normalize data
 max_pixel_val = 0
 for j in range(len(h5_files)):
@@ -58,8 +58,8 @@ for j in range(len(h5_files)):
 
 # testing each image from "validation set"
 step = 0
-for k in range(len(h5_files_val)):
-        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', batch_size=1)
+for k in range(len(h5_files_test)):
+        data_loader = dataReader.get_dataloader(h5_files_test[k], 'reconstruction_rss', batch_size=1)
 
         for l, data in enumerate(data_loader):
             step += 1

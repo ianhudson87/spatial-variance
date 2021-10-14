@@ -17,6 +17,7 @@ class Dataset(torch.utils.data.Dataset):
         h5f = h5py.File(self.train_file, 'r')
         # print("here", h5f.keys())
         h5d = h5f[self.img_type] # h5 dataset of the images
+        self.data = [h5d[i] for i in range(h5d.len())] # THE IMPORTANT STUFF
         self.num_images = h5d.len()
         h5f.close()
 
@@ -24,16 +25,16 @@ class Dataset(torch.utils.data.Dataset):
         return self.num_images
 
     def __getitem__(self, index):
-        h5f = h5py.File(self.train_file, 'r')
+        # h5f = h5py.File(self.train_file, 'r')
         # h5d = h5f[self.img_type]
         # print(self.train_file)
         # print("regular", h5d)
         # print("new", self.h5d)
         # print(type(h5d[0]))
-        data_np = h5f[self.img_type][index] # np array (dtype=complex64)
+        data_np = self.data[index]
         # print(data_np.dtype)
         data_torch = torch.from_numpy(data_np)
-        h5f.close()
+        # h5f.close()
         return data_torch
 
 def get_dataloader(h5_path, img_type, batch_size):
