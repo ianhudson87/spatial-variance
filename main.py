@@ -10,7 +10,8 @@ import torch.nn as nn
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 import utils
-import model
+from model_zoo.udvd_model import UDVD
+from model_zoo.dncnn_model import DnCNN
 import sys
 import Tasks.UndersampleFourierTask as UF
 import Tasks.VariableNoiseTask as VN
@@ -20,16 +21,18 @@ torch.set_num_threads(1)
 
 # argument variables
 task_names = ["undersample", "vnoise"]
-if len(sys.argv) != 3 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric:
-    sys.exit("Usage: main.py [task] [gpu #] task={undersample, vnoise}")
+model_names = ["udvd", "dncnn"]
+if len(sys.argv) != 4 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[3] not in model_names:
+    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise} model={udvd, dncnn}")
 task_name = sys.argv[1]
+model_name = sys.argv[3]
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 
 # get options
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
-opt["out_folder"] = "./runs/" + opt["model_name"] + utils.get_date_time()
+opt["out_folder"] = "./runs/" + model_name + opt["task_name"] + utils.get_date_time()
 
 # Defining the task to solve
 task_index = task_names.index(task_name)
@@ -39,7 +42,12 @@ elif task_index==1:
     task = VN.VariableNoiseTask(20, 50, 20)
 
 # creating model
-net = model.UDVD(k=5, in_channels=1, depth=5)
+if model_name == "udvd":
+    print("Using UDVD model")
+    net = UDVD(k=5, in_channels=1, depth=5)
+elif model_name == "dncnn":
+    print("Using DNCNN model")
+    net = DnCNN(channels=1)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(net.parameters(), lr=opt["lr"])
 
@@ -94,7 +102,10 @@ for epoch in range(opt["epochs"]):
             net.train()
             net.zero_grad()
             optimizer.zero_grad()
-            y_pred = net(inputs, kernel, noise)
+            if model_name == "udvd":
+                y_pred = net(inputs, kernel, noise)
+            elif model_name == "dncnn":
+                y_pred = net(inputs)
             loss = criterion(y_pred, ground_truth)
             loss.backward()
             optimizer.step()
