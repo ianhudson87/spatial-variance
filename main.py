@@ -12,6 +12,7 @@ from tensorboardX import SummaryWriter
 import utils
 from model_zoo.udvd_model import UDVD
 from model_zoo.dncnn_model import DnCNN
+from model_zoo.unet_model import UNet
 import sys
 import Tasks.UndersampleFourierTask as UF
 import Tasks.VariableNoiseTask as VN
@@ -21,9 +22,9 @@ torch.set_num_threads(1)
 
 # argument variables
 task_names = ["undersample", "vnoise"]
-model_names = ["udvd", "dncnn"]
+model_names = ["udvd", "dncnn", "unet"]
 if len(sys.argv) != 4 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[3] not in model_names:
-    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise} model={udvd, dncnn}")
+    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise} model={udvd, dncnn, unet}")
 task_name = sys.argv[1]
 model_name = sys.argv[3]
 
@@ -48,6 +49,9 @@ if model_name == "udvd":
 elif model_name == "dncnn":
     print("Using DNCNN model")
     net = DnCNN(channels=1)
+elif model_name == "unet":
+    print("Using UNet model")
+    net = UNet(in_channels=1)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(net.parameters(), lr=opt["lr"])
 
@@ -104,7 +108,7 @@ for epoch in range(opt["epochs"]):
             optimizer.zero_grad()
             if model_name == "udvd":
                 y_pred = net(inputs, kernel, noise)
-            elif model_name == "dncnn":
+            elif model_name in ["dncnn", "unet"]:
                 y_pred = net(inputs)
             loss = criterion(y_pred, ground_truth)
             loss.backward()

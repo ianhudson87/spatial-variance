@@ -7,6 +7,7 @@ import Tasks.UndersampleFourierTask as UF
 import Tasks.VariableNoiseTask as VN
 from model_zoo.udvd_model import UDVD
 from model_zoo.dncnn_model import DnCNN
+from model_zoo.unet_model import UNet
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -42,6 +43,9 @@ if model_name == "udvd":
 elif model_name == "dncnn":
     print("Using DNCNN model")
     net = DnCNN(channels=1)
+elif model_name == "unet":
+    print("Using UNet model")
+    net = UNet(in_channels=1)
 criterion = nn.MSELoss()
 
 if torch.cuda.is_available():
@@ -89,7 +93,7 @@ for k in range(len(h5_files_test)):
             net.eval()
             if model_name == "udvd":
                 y_pred = net(inputs, kernel, noise)
-            elif model_name == "dncnn":
+            elif model_name in ["dncnn", "unet"]:
                 y_pred = net(inputs)
             # loss = criterion(y_pred, ground_truth)
             
