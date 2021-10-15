@@ -68,6 +68,9 @@ h5_files_test = utils.get_testing_data(h5_files)
 #         max_pixel_val = max(max_pixel_val, torch.max(data))
 
 # testing each image from "validation set"
+out_folder = checkpoint_name+f"_epoch{epoch}"
+psnr = []
+ssim = []
 step = 0
 for k in range(len(h5_files_test)):
         data_loader = dataReader.get_dataloader(h5_files_test[k], 'reconstruction_rss', batch_size=1)
@@ -99,8 +102,13 @@ for k in range(len(h5_files_test)):
             
             with torch.no_grad():
                 y_pred = torch.clamp(y_pred, 0., 1.)
-                utils.save_image(ground_truth, checkpoint_name+f"_epoch{epoch}", str(step)+"_groundtruth")
-                utils.save_image(inputs, checkpoint_name+f"_epoch{epoch}", str(step)+"_noisy")
-                utils.save_image(y_pred, checkpoint_name+f"_epoch{epoch}", str(step)+"_reconstructed")
+                utils.save_image(ground_truth, out_folder, str(step)+"_groundtruth")
+                utils.save_image(inputs, out_folder, str(step)+"_noisy")
+                utils.save_image(y_pred, out_folder, str(step)+"_reconstructed")
+                psnr.append(utils.get_psnr(inputs, y_pred))
+                ssim.append(utils.get_ssim(inputs, y_pred))
             # batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             # writer.add_scalar("val_loss", loss.item(), epoch)
+
+
+utils.write_test_file(psnr, ssim, out_folder)

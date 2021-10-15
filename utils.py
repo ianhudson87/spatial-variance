@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import json
 import numpy as np
-from skimage.metrics import peak_signal_noise_ratio
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from datetime import datetime
 import cv2
 import os
@@ -45,3 +45,25 @@ def save_image(img, folder, name):
     np_image = np.array(img.cpu())[0]
     np_image = np.swapaxes(np.swapaxes(np_image, 0, 2), 0, 1)*256
     cv2.imwrite(os.path.join(path, name+".tif"), np_image)
+
+def get_psnr(img_true, img_test):
+    img_true = img_true.cpu().numpy().astype(np.float32)[0]
+    img_test = img_test.cpu().numpy().astype(np.float32)[0]
+    return peak_signal_noise_ratio(img_true, img_test, data_range=1.)
+
+def get_ssim(img_true, img_test):
+    img_true = np.swapaxes(img_true.cpu().numpy().astype(np.float32)[0], 0, 2)
+    img_test = np.swapaxes(img_test.cpu().numpy().astype(np.float32)[0], 0, 2)
+    return structural_similarity(img_true, img_test, multichannel=True)
+
+def float_str(x, places):
+    return ("{:." + str(places) + "f}").format(x)
+
+def write_test_file(psnr_vals, ssim_vals, folder):
+    path = os.path.join("test_logs", folder, "_stats.txt")
+    f = open(path, "w")
+    f.write("psnr, ssim" + "\n")
+    for k in range(len(psnr_vals)):
+        f.write(float_str(psnr_vals[k], 2) + "," + float_str(ssim_vals[k], 4))
+        f.write("\n")
+    f.close()
