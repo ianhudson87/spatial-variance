@@ -73,7 +73,14 @@ for epoch in range(opt["epochs"]):
         # training
         for i, data in enumerate(data_loader):
             step += 1
-            ground_truth = (torch.unsqueeze(data, 1)/max_pixel_val) # add channel dimension to data, apply normalization across all data
+            max_vals = torch.amax(data, dim=(1,2))
+            max_vals = torch.reshape(max_vals, (data.shape[0], 1, 1))
+            # max_vals = torch.unsqueeze(data, 2)
+            #print(max_vals)
+            #print(data.shape)
+            data = torch.div(data, max_vals)
+            ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data, apply normalization across all data
+            #print(ground_truth)
             if torch.cuda.is_available():
                 ground_truth = ground_truth.cuda()
             # data is batch of ground truth images

@@ -50,11 +50,11 @@ data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_test = utils.get_testing_data(h5_files)
 # Getting max pixel value of all data to normalize data
-max_pixel_val = 0
-for j in range(len(h5_files)):
-    data_loader = dataReader.get_dataloader(h5_files[j], 'reconstruction_rss', opt["batch_size"])
-    for i, data in enumerate(data_loader):
-        max_pixel_val = max(max_pixel_val, torch.max(data))
+# max_pixel_val = 0
+# for j in range(len(h5_files)):
+#     data_loader = dataReader.get_dataloader(h5_files[j], 'reconstruction_rss', opt["batch_size"])
+#     for i, data in enumerate(data_loader):
+#         max_pixel_val = max(max_pixel_val, torch.max(data))
 
 # testing each image from "validation set"
 step = 0
@@ -63,7 +63,15 @@ for k in range(len(h5_files_test)):
 
         for l, data in enumerate(data_loader):
             step += 1
-            ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
+            #print(data.shape)
+            #print(data)
+            #max_vals = torch.max(data) # max vals for each image
+            #print(max_vals)
+            #data = data / max_vals
+            ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
+            max_vals = torch.amax(ground_truth, dim=(2, 3))
+            ground_truth = ground_truth / max_vals
+            #print(ground_truth)
             if torch.cuda.is_available():
                 ground_truth = ground_truth.cuda()
             #####################################

@@ -5,5 +5,5 @@
     "lr": 1e-5,
     "train_val_split": 0.8,
     "model_name": "UDVD_undersample",
-    "epochs": 3
+    "epochs": 20
 }
