@@ -88,6 +88,7 @@ for epoch in range(opt["epochs"]):
             #####################################
             # Applying deconstruction to image
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
+            inputs = torch.clamp(inputs, 0., 1.)
             #####################################
 
             net.train()

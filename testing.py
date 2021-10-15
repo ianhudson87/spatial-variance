@@ -77,6 +77,7 @@ for k in range(len(h5_files_test)):
             #####################################
             # Applying deconstruction to image
             inputs, kernel, noise = task.get_deconstructed(ground_truth)
+            inputs = torch.clamp(inputs, 0., 1.)
             #####################################
             net.eval()
             y_pred = net(inputs, kernel, noise)
