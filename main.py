@@ -32,7 +32,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 
 # get options
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
-opt["out_folder"] = "./runs/" + model_name + opt["task_name"] + utils.get_date_time()
+opt["out_folder"] = os.path.join("runs", f"{model_name}_{opt['task_name']}_{utils.get_date_time()}")
 
 # Defining the task to solve
 task_index = task_names.index(task_name)
@@ -132,7 +132,10 @@ for epoch in range(opt["epochs"]):
             #####################################
 
             net.eval()
-            y_pred = net(inputs, kernel, noise)
+            if model_name == "udvd":
+                y_pred = net(inputs, kernel, noise)
+            elif model_name == "dncnn":
+                y_pred = net(inputs)
             # loss = criterion(y_pred, ground_truth)
 
             y_pred = torch.clamp(y_pred, 0., 1.)

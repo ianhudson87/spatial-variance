@@ -5,7 +5,8 @@ import glob
 import dataReader
 import Tasks.UndersampleFourierTask as UF
 import Tasks.VariableNoiseTask as VN
-import model
+from model_zoo.udvd_model import UDVD
+from model_zoo.dncnn_model import DnCNN
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -26,7 +27,6 @@ os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 
 # get options
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
-opt["out_folder"] = "./runs/" + model_name + opt["task_name"] + utils.get_date_time()
 
 # Defining the task to solve
 task_index = task_names.index(task_name)
@@ -41,6 +41,7 @@ if model_name == "udvd":
     net = model.UDVD(k=5, in_channels=1, depth=5)
 elif model_name == "dncnn":
     print("Using DNCNN model")
+    net = DnCNN(channels=1)
 criterion = nn.MSELoss()
 
 if torch.cuda.is_available():
@@ -94,8 +95,8 @@ for k in range(len(h5_files_test)):
             
             with torch.no_grad():
                 y_pred = torch.clamp(y_pred, 0., 1.)
-                utils.save_image(ground_truth, checkpoint_name, str(step)+"_groundtruth")
-                utils.save_image(inputs, checkpoint_name, str(step)+"_noisy")
-                utils.save_image(y_pred, checkpoint_name, str(step)+"_reconstructed")
+                utils.save_image(ground_truth, checkpoint_name+f"_epoch{epoch}", str(step)+"_groundtruth")
+                utils.save_image(inputs, checkpoint_name+f"_epoch{epoch}", str(step)+"_noisy")
+                utils.save_image(y_pred, checkpoint_name+f"_epoch{epoch}", str(step)+"_reconstructed")
             # batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             # writer.add_scalar("val_loss", loss.item(), epoch)
