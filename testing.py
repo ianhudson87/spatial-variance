@@ -77,14 +77,8 @@ for k in range(len(h5_files_test)):
 
         for l, data in enumerate(data_loader):
             step += 1
-            #print(data.shape)
-            #print(data)
-            #max_vals = torch.max(data) # max vals for each image
-            #print(max_vals)
-            #data = data / max_vals
-            ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
-            max_vals = torch.amax(ground_truth, dim=(2, 3))
-            ground_truth = ground_truth / max_vals
+
+            ground_truth = utils.preprocess(data)
             #print(ground_truth)
             if torch.cuda.is_available():
                 ground_truth = ground_truth.cuda()
