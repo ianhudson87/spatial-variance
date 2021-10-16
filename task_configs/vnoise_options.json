@@ -5,5 +5,5 @@
     "lr": 1e-5,
     "train_val_split": 0.8,
     "task_name": "vnoise",
-    "epochs": 20
+    "epochs": 50
 }
