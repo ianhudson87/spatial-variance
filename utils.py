@@ -23,6 +23,7 @@ def train_val_split(files, train_frac):
     return files[:split_point], files[split_point:-1]
 
 def get_testing_data(files):
+    print(f"USING TESTING FILE: {files[-1]}")
     return [files[-1]]
 
 def batch_PSNR(img, imclean, data_range):

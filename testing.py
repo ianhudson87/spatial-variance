@@ -15,7 +15,7 @@ torch.set_num_threads(1)
 
 # argument variables
 task_names = ["undersample", "vnoise"]
-model_names = ["udvd", "dncnn"]
+model_names = ["udvd", "dncnn", "unet"]
 if len(sys.argv) != 6 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[5] not in model_names:
     sys.exit("Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={undersample, vnoise} model_name={udvd, dncnn}")
 task_name = sys.argv[1]
