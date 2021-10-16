@@ -147,5 +147,5 @@ for epoch in range(opt["epochs"]):
     
     torch.save({
         'net': net.state_dict(),
-        'optimizer': optimizer.state_dict()
+        # 'optimizer': optimizer.state_dict()
     }, os.path.join(opt["out_folder"], 'net%d.pth' % (epoch+1)))
