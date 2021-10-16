@@ -44,4 +44,9 @@ class VariableNoiseTask:
             noise = noise.cuda()
             kernel = kernel.cuda()
         noisy_image = img + noise
-        return noisy_image, kernel, noise
+
+        noise_output = torch.zeros(batch_size, 1, h, w)
+        if torch.cuda.is_available():
+            noise_output = noise_output.cuda()
+
+        return noisy_image, kernel, noise_output

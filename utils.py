@@ -71,21 +71,21 @@ def write_test_file(psnr_vals, ssim_vals, folder):
     f.close()
 
 def preprocess(data):
-    print("new")
+    # print("new")
     min_vals = torch.amin(data, dim=(1,2))
     min_vals = torch.reshape(min_vals, (data.shape[0], 1, 1))
     data = torch.sub(data, min_vals)
 
-    print("data", data)
-    print("mins", torch.amin(data, dim=(1,2)))
+    # print("data", data)
+    # print("mins", torch.amin(data, dim=(1,2)))
 
     max_vals = torch.amax(data, dim=(1,2))
     max_vals = torch.reshape(max_vals, (data.shape[0], 1, 1))
     data = torch.div(data, max_vals)
 
-    print("data", data)
-    print("mins", torch.amin(data, dim=(1,2)))
-    print("maxs", torch.amax(data, dim=(1,2)))
+    # print("data", data)
+    # print("mins", torch.amin(data, dim=(1,2)))
+    # print("maxs", torch.amax(data, dim=(1,2)))
     
     ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
     return ground_truth

@@ -45,7 +45,7 @@ elif task_index==1:
 # creating model
 if model_name == "udvd":
     print("Using UDVD model")
-    net = UDVD(k=5, in_channels=1, depth=5)
+    net = UDVD(k=5, in_channels=1, depth=3)
 elif model_name == "dncnn":
     print("Using DNCNN model")
     net = DnCNN(channels=1)
