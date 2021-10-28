@@ -1,7 +1,9 @@
 {
     "data_folder_name": "singlecoil_val",
     "batch_size": 4,
-    "sample_percent": 0.8,
+    "min_stdev": 30,
+    "max_stdev": 30,
+    "patch_size": 999,
     "lr": 1e-5,
     "train_val_split": 0.8,
     "task_name": "vnoise",

@@ -34,7 +34,7 @@ task_index = task_names.index(task_name)
 if task_index==0:
     task = UF.UndersampleFourierTask(opt["sample_percent"])
 elif task_index==1:
-    task = VN.VariableNoiseTask(20, 50, 20)
+    task = VN.VariableNoiseTask(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
 
 # creating model
 if model_name == "udvd":
