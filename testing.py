@@ -60,6 +60,7 @@ net.load_state_dict(checkpoint['net'])
 data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_test = utils.get_testing_data(h5_files)
+
 # Getting max pixel value of all data to normalize data
 # max_pixel_val = 0
 # for j in range(len(h5_files)):
@@ -99,8 +100,8 @@ for k in range(len(h5_files_test)):
                 utils.save_image(ground_truth, out_folder, str(step)+"_groundtruth")
                 utils.save_image(inputs, out_folder, str(step)+"_noisy")
                 utils.save_image(y_pred, out_folder, str(step)+"_reconstructed")
-                psnr.append(utils.get_psnr(inputs, y_pred))
-                ssim.append(utils.get_ssim(inputs, y_pred))
+                psnr.append(utils.get_psnr(ground_truth, y_pred))
+                ssim.append(utils.get_ssim(ground_truth, y_pred))
             # batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             # writer.add_scalar("val_loss", loss.item(), epoch)
 
