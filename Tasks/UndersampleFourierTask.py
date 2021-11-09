@@ -9,7 +9,7 @@ ifft = torch.fft.ifft
 fft = torch.fft.fft
 fftshift = torch.fft.fftshift
 
-class UndersampleFourierTask:
+class Task:
     def __init__(self, sample_percent):
         print("Using Undersampling Fourier Space task!")
         self.sample_percent = sample_percent

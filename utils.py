@@ -8,7 +8,9 @@ import os
 from pathlib import Path
 import torch
 
-def imshow(img):
+def imshow(img, swap_axes=False):
+    if swap_axes:
+        img = np.swapaxes(np.swapaxes(img, 0, 2), 0, 1)
     plt.figure()
     plt.imshow(img, cmap='gray')
     plt.show()

@@ -3,8 +3,7 @@ import os
 import utils
 import glob
 import dataReader
-import Tasks.UndersampleFourierTask as UF
-import Tasks.VariableNoiseTask as VN
+from Tasks import QuarterTask, UndersampleFourierTask, VariableNoiseTask
 from model_zoo.udvd_model import UDVD
 from model_zoo.dncnn_model import DnCNN
 from model_zoo.unet_model import UNet
@@ -14,10 +13,10 @@ import torch.optim as optim
 torch.set_num_threads(1)
 
 # argument variables
-task_names = ["undersample", "vnoise"]
+task_names = ["undersample", "vnoise", "quarter"]
 model_names = ["udvd", "dncnn", "unet"]
 if len(sys.argv) != 6 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[5] not in model_names:
-    sys.exit("Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={undersample, vnoise} model_name={udvd, dncnn}")
+    sys.exit("Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={undersample, vnoise, quarter} model_name={udvd, dncnn}")
 task_name = sys.argv[1]
 checkpoint_name = sys.argv[3]
 epoch = sys.argv[4]
@@ -32,9 +31,11 @@ opt = utils.get_options(f"./task_configs/{task_name}_options.json")
 # Defining the task to solve
 task_index = task_names.index(task_name)
 if task_index==0:
-    task = UF.UndersampleFourierTask(opt["sample_percent"])
+    task = UndersampleFourierTask.Task(opt["sample_percent"])
 elif task_index==1:
-    task = VN.VariableNoiseTask(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
+    task = VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
+elif task_index==2:
+    task = QuarterTask.Task((opt["quadrant1_stdev", "quadrant2_stdev", "quadrant3_stdev", "quadrant4_stdev"]))
 
 # creating model
 if model_name == "udvd":

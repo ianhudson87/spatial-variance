@@ -14,17 +14,16 @@ from model_zoo.udvd_model import UDVD
 from model_zoo.dncnn_model import DnCNN
 from model_zoo.unet_model import UNet
 import sys
-import Tasks.UndersampleFourierTask as UF
-import Tasks.VariableNoiseTask as VN
+from Tasks import QuarterTask, UndersampleFourierTask, VariableNoiseTask
 torch.set_num_threads(1)
 # print(torch.cuda.current_device())
 # print(torch.cuda.device_count())
 
 # argument variables
-task_names = ["undersample", "vnoise"]
+task_names = ["undersample", "vnoise", "quarter"]
 model_names = ["udvd", "dncnn", "unet"]
 if len(sys.argv) != 4 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[3] not in model_names:
-    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise} model={udvd, dncnn, unet}")
+    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise, quarter} model={udvd, dncnn, unet}")
 task_name = sys.argv[1]
 model_name = sys.argv[3]
 
@@ -38,9 +37,12 @@ opt["out_folder"] = os.path.join("runs", f"{model_name}_{opt['task_name']}_{util
 # Defining the task to solve
 task_index = task_names.index(task_name)
 if task_index==0:
-    task = UF.UndersampleFourierTask(opt["sample_percent"])
+    task = UndersampleFourierTask.Task(opt["sample_percent"])
 elif task_index==1:
-    task = VN.VariableNoiseTask(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
+    task = VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
+elif task_index==2:
+    # print(opt)
+    task = QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]))
 
 # creating model
 if model_name == "udvd":

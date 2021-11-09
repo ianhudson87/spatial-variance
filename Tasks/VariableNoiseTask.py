@@ -2,7 +2,7 @@ import torch
 import math
 import random
 
-class VariableNoiseTask:
+class Task:
     def __init__(self, noise_min, noise_max, patch_size):
         print("Using Variable Noise Task!")
         self.noise_min = noise_min

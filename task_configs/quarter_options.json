@@ -1,0 +1,12 @@
+{
+    "data_folder_name": "singlecoil_val",
+    "batch_size": 4,
+    "lr": 1e-5,
+    "train_val_split": 0.8,
+    "task_name": "Quarter",
+    "quadrant1_stdev": 15,
+    "quadrant2_stdev": 25,
+    "quadrant3_stdev": 35,
+    "quadrant4_stdev": 50,
+    "epochs": 50
+}
