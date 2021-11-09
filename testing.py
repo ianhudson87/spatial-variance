@@ -60,11 +60,7 @@ net.load_state_dict(checkpoint['net'])
 data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_test = utils.get_testing_data(h5_files)
-<<<<<<< HEAD
 h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_split"])
-=======
-
->>>>>>> 0e285345484aa1eb4c23560b8be966a1d8aa66e4
 # Getting max pixel value of all data to normalize data
 # max_pixel_val = 0
 # for j in range(len(h5_files)):
