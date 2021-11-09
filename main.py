@@ -116,9 +116,9 @@ for epoch in range(opt["epochs"]):
 
     # Validation 
     total_psnr = 0
-    batches = 1
+    images = 1
     for k in range(len(h5_files_val)):
-        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', opt["batch_size"])
+        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', batch_size=1)
         
         for l, data in enumerate(data_loader):
             ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
@@ -137,12 +137,12 @@ for epoch in range(opt["epochs"]):
             # loss = criterion(y_pred, ground_truth)
 
             y_pred = torch.clamp(y_pred, 0., 1.)
-            batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
-            total_psnr += batch_psnr
-            batches += 1
+            img_psnr = utils.get_psnr(y_pred, ground_truth, 1)
+            total_psnr += img_psnr
+            images += 1
             # writer.add_scalar("val_loss", loss.item(), epoch)
-    writer.add_scalar("val_psnr", total_psnr / batches, epoch)
-    print(f"Validation: epoch: {epoch}, psnr: {total_psnr / batches}")
+    writer.add_scalar("val_psnr", total_psnr / images, epoch)
+    print(f"Validation: epoch: {epoch}, psnr: {total_psnr / images}")
 
     
     torch.save({

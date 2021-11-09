@@ -100,7 +100,7 @@ for k in range(len(h5_files_test)):
                 utils.save_image(ground_truth, out_folder, str(step)+"_groundtruth")
                 utils.save_image(inputs, out_folder, str(step)+"_noisy")
                 utils.save_image(y_pred, out_folder, str(step)+"_reconstructed")
-                psnr.append(utils.get_psnr(ground_truth, y_pred))
+                psnr.append(utils.batch_PSNR(ground_truth, y_pred))
                 ssim.append(utils.get_ssim(ground_truth, y_pred))
             # batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             # writer.add_scalar("val_loss", loss.item(), epoch)
