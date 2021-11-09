@@ -6,6 +6,7 @@ from datetime import datetime
 import cv2
 import os
 from pathlib import Path
+import torch
 
 def imshow(img):
     plt.figure()
@@ -23,6 +24,7 @@ def train_val_split(files, train_frac):
     return files[:split_point], files[split_point:-1]
 
 def get_testing_data(files):
+    print(f"USING TESTING FILE: {files[-1]}")
     return [files[-1]]
 
 def batch_PSNR(img, imclean, data_range):
@@ -67,3 +69,23 @@ def write_test_file(psnr_vals, ssim_vals, folder):
         f.write(float_str(psnr_vals[k], 2) + "," + float_str(ssim_vals[k], 4))
         f.write("\n")
     f.close()
+
+def preprocess(data):
+    # print("new")
+    min_vals = torch.amin(data, dim=(1,2))
+    min_vals = torch.reshape(min_vals, (data.shape[0], 1, 1))
+    data = torch.sub(data, min_vals)
+
+    # print("data", data)
+    # print("mins", torch.amin(data, dim=(1,2)))
+
+    max_vals = torch.amax(data, dim=(1,2))
+    max_vals = torch.reshape(max_vals, (data.shape[0], 1, 1))
+    data = torch.div(data, max_vals)
+
+    # print("data", data)
+    # print("mins", torch.amin(data, dim=(1,2)))
+    # print("maxs", torch.amax(data, dim=(1,2)))
+    
+    ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
+    return ground_truth

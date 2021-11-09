@@ -15,7 +15,7 @@ torch.set_num_threads(1)
 
 # argument variables
 task_names = ["undersample", "vnoise"]
-model_names = ["udvd", "dncnn"]
+model_names = ["udvd", "dncnn", "unet"]
 if len(sys.argv) != 6 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[5] not in model_names:
     sys.exit("Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={undersample, vnoise} model_name={udvd, dncnn}")
 task_name = sys.argv[1]
@@ -34,7 +34,7 @@ task_index = task_names.index(task_name)
 if task_index==0:
     task = UF.UndersampleFourierTask(opt["sample_percent"])
 elif task_index==1:
-    task = VN.VariableNoiseTask(20, 50, 20)
+    task = VN.VariableNoiseTask(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
 
 # creating model
 if model_name == "udvd":
@@ -60,7 +60,11 @@ net.load_state_dict(checkpoint['net'])
 data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_test = utils.get_testing_data(h5_files)
+<<<<<<< HEAD
 h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_split"])
+=======
+
+>>>>>>> 0e285345484aa1eb4c23560b8be966a1d8aa66e4
 # Getting max pixel value of all data to normalize data
 # max_pixel_val = 0
 # for j in range(len(h5_files)):
@@ -78,14 +82,8 @@ for k in range(len(h5_files_val)):
 
         for l, data in enumerate(data_loader):
             step += 1
-            #print(data.shape)
-            #print(data)
-            #max_vals = torch.max(data) # max vals for each image
-            #print(max_vals)
-            #data = data / max_vals
-            ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
-            max_vals = torch.amax(ground_truth, dim=(2, 3))
-            ground_truth = ground_truth / max_vals
+
+            ground_truth = utils.preprocess(data)
             #print(ground_truth)
             if torch.cuda.is_available():
                 ground_truth = ground_truth.cuda()
@@ -106,8 +104,8 @@ for k in range(len(h5_files_val)):
                 utils.save_image(ground_truth, out_folder, str(step)+"_groundtruth")
                 utils.save_image(inputs, out_folder, str(step)+"_noisy")
                 utils.save_image(y_pred, out_folder, str(step)+"_reconstructed")
-                psnr.append(utils.get_psnr(inputs, y_pred))
-                ssim.append(utils.get_ssim(inputs, y_pred))
+                psnr.append(utils.batch_PSNR(ground_truth, y_pred))
+                ssim.append(utils.get_ssim(ground_truth, y_pred))
             # batch_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             # writer.add_scalar("val_loss", loss.item(), epoch)
 
