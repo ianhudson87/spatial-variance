@@ -30,15 +30,16 @@ class Task:
             # noise for bottom right quad
             noise[j, 0, mid_h:h, mid_w:w] = torch.zeros([mid_h, w-mid_w]).normal_(mean=0, std=self.stdev_tuple[3]/255.)
 
-
+        if torch.cuda.is_available():
+            noise = noise.cuda()
         noisy_image = img + noise
 
-        utils.imshow(data[3], swap_axes=True)
-        utils.imshow(noisy_image[3], swap_axes=True)
+        #utils.imshow(data[3], swap_axes=True)
+        #utils.imshow(noisy_image[3], swap_axes=True)
 
         kernel = torch.zeros(batch_size, 15, h, w)
-        noise = torch.zeros(batch_size, 1, h, w)
+        noise_output = torch.zeros(batch_size, 1, h, w)
         if torch.cuda.is_available():
             kernel = kernel.cuda()
-            noise = noise.cuda()
-        return noisy_image, kernel, noise
+            noise_output = noise.cuda()
+        return noisy_image, kernel, noise_output
