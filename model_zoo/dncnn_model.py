@@ -4,6 +4,7 @@ import torch.nn as nn
 class DnCNN(nn.Module):
     def __init__(self, channels, num_of_layers=14, verbose=False):
         super(DnCNN, self).__init__()
+        print("Using DnCNN model")
         kernel_size = 3
         padding = 1
         features = 64

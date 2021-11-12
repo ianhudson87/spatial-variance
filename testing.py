@@ -13,8 +13,8 @@ import torch.optim as optim
 torch.set_num_threads(1)
 
 # argument variables
-task_names = ["undersample", "vnoise", "quarter"]
-model_names = ["udvd", "dncnn", "unet"]
+task_names = utils.get_task_names()
+model_names = utils.get_model_names()
 if len(sys.argv) != 6 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[5] not in model_names:
     sys.exit("Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={undersample, vnoise, quarter} model_name={udvd, dncnn}")
 task_name = sys.argv[1]
@@ -29,24 +29,11 @@ os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
 
 # Defining the task to solve
-task_index = task_names.index(task_name)
-if task_index==0:
-    task = UndersampleFourierTask.Task(opt["sample_percent"])
-elif task_index==1:
-    task = VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
-elif task_index==2:
-    task = QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]))
+task = utils.get_task(task_name, opt)
 
 # creating model
-if model_name == "udvd":
-    print("Using UDVD model")
-    net = UDVD(k=5, in_channels=1, depth=5)
-elif model_name == "dncnn":
-    print("Using DNCNN model")
-    net = DnCNN(channels=1)
-elif model_name == "unet":
-    print("Using UNet model")
-    net = UNet(in_channels=1)
+net = utils.get_model(model_name)
+
 criterion = nn.MSELoss()
 
 if torch.cuda.is_available():
@@ -90,9 +77,9 @@ for k in range(len(h5_files_test)):
             inputs = torch.clamp(inputs, 0., 1.)
             #####################################
             net.eval()
-            if model_name == "udvd":
+            if model_name in ["udvd", "udvd_abl"]:
                 y_pred = net(inputs, kernel, noise)
-            elif model_name in ["dncnn", "unet"]:
+            else:
                 y_pred = net(inputs)
             # loss = criterion(y_pred, ground_truth)
             

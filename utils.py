@@ -7,6 +7,11 @@ import cv2
 import os
 from pathlib import Path
 import torch
+from Tasks import QuarterTask, UndersampleFourierTask, VariableNoiseTask
+from model_zoo.udvd_model import UDVD
+from model_zoo.dncnn_model import DnCNN
+from model_zoo.unet_model import UNet
+from model_zoo.udvd_ablation_model import UDVDablation
 
 def imshow(img, swap_axes=False):
     if swap_axes:
@@ -91,3 +96,36 @@ def preprocess(data):
     
     ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
     return ground_truth
+
+def get_task(task_name, opt):
+    task_names = get_task_names()
+    task_index = task_names.index(task_name)
+    if task_index==0:
+        return UndersampleFourierTask.Task(opt["sample_percent"])
+    elif task_index==1:
+        return VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
+    elif task_index==2:
+        # print(opt)
+        return QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]))
+    else:
+        raise ValueError("couldn't find task:", task_name)
+
+def get_model(model_name):
+    model_names = get_model_names()
+    model_index = model_names.index(model_name)
+    if model_index == 0:
+        return UDVD(k=5, in_channels=1, depth=5)
+    elif model_index == 1:
+        return DnCNN(channels=1)
+    elif model_index == 2:
+        return UNet(in_channels=1)
+    elif model_index == 3:
+        return UDVDablation(k=5, in_channels=1, depth=5)
+    else:
+        raise ValueError("couldn't find model:", model_name)
+
+def get_model_names():
+    return ["udvd", "dncnn", "unet", "udvd_abl"]
+
+def get_task_names():
+    return ["undersample", "vnoise", "quarter"]

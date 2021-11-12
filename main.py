@@ -10,20 +10,16 @@ import torch.nn as nn
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 import utils
-from model_zoo.udvd_model import UDVD
-from model_zoo.dncnn_model import DnCNN
-from model_zoo.unet_model import UNet
 import sys
-from Tasks import QuarterTask, UndersampleFourierTask, VariableNoiseTask
 torch.set_num_threads(1)
 # print(torch.cuda.current_device())
 # print(torch.cuda.device_count())
 
 # argument variables
-task_names = ["undersample", "vnoise", "quarter"]
-model_names = ["udvd", "dncnn", "unet"]
+task_names = utils.get_task_names()
+model_names = utils.get_model_names()
 if len(sys.argv) != 4 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[3] not in model_names:
-    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise, quarter} model={udvd, dncnn, unet}")
+    sys.exit("Usage: main.py [task] [gpu #] [model] task={undersample, vnoise, quarter} model={udvd, dncnn, unet, udvd_abl}")
 task_name = sys.argv[1]
 model_name = sys.argv[3]
 
@@ -35,25 +31,11 @@ opt = utils.get_options(f"./task_configs/{task_name}_options.json")
 opt["out_folder"] = os.path.join("runs", f"{model_name}_{opt['task_name']}_{utils.get_date_time()}")
 
 # Defining the task to solve
-task_index = task_names.index(task_name)
-if task_index==0:
-    task = UndersampleFourierTask.Task(opt["sample_percent"])
-elif task_index==1:
-    task = VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
-elif task_index==2:
-    # print(opt)
-    task = QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]))
+task = utils.get_task(task_name, opt)
 
 # creating model
-if model_name == "udvd":
-    print("Using UDVD model")
-    net = UDVD(k=5, in_channels=1, depth=5)
-elif model_name == "dncnn":
-    print("Using DNCNN model")
-    net = DnCNN(channels=1)
-elif model_name == "unet":
-    print("Using UNet model")
-    net = UNet(in_channels=1)
+net = utils.get_model(model_name)
+
 criterion = nn.MSELoss()
 optimizer = optim.Adam(net.parameters(), lr=opt["lr"])
 
@@ -69,11 +51,11 @@ data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_split"])
 # Getting max pixel value of all data to normalize data
-max_pixel_val = 0
-for j in range(len(h5_files)):
-    data_loader = dataReader.get_dataloader(h5_files[j], 'reconstruction_rss', opt["batch_size"])
-    for i, data in enumerate(data_loader):
-        max_pixel_val = max(max_pixel_val, torch.max(data))
+# max_pixel_val = 0
+# for j in range(len(h5_files)):
+#     data_loader = dataReader.get_dataloader(h5_files[j], 'reconstruction_rss', opt["batch_size"])
+#     for i, data in enumerate(data_loader):
+#         max_pixel_val = max(max_pixel_val, torch.max(data))
     
 
 step=0
@@ -103,9 +85,9 @@ for epoch in range(opt["epochs"]):
             net.train()
             net.zero_grad()
             optimizer.zero_grad()
-            if model_name == "udvd":
+            if model_name in ["udvd", "udvd_abl"]:
                 y_pred = net(inputs, kernel, noise)
-            elif model_name in ["dncnn", "unet"]:
+            else:
                 y_pred = net(inputs)
             loss = criterion(y_pred, ground_truth)
             loss.backward()

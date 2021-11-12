@@ -5,11 +5,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class UDVD(nn.Module):
+class UDVDablation(nn.Module):
     def __init__(self, k, in_channels, depth=15):
         # k = size of dynamic kernel
         super().__init__()
-        print("Using UDVD model")
+        print("using UDVD ablation model")
         self.in_channels = in_channels
         self.head = nn.Conv2d(16 + in_channels, 128, 3, 1, 1)
         body = [ResBlock(128, 3, 0.1) for _ in range(depth)]
@@ -116,15 +116,29 @@ class CommonDynamicConv(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(16, in_channels, 3, 1, 1)
         )
-        self.feat_kernel = nn.Conv2d(160, k**2, 3, 1, 1)
-        self.pixel_conv = PixelConv(scale=1, depthwise=True)
+
+        # self.feat_kernel = nn.Conv2d(160, k**2, 3, 1, 1)
+        # self.pixel_conv = PixelConv(scale=1, depthwise=True)
+
+        # block replacing the dynamic kernel generator and application of the dynamic kernel
+        self.replacement_block = nn.Sequential(
+            nn.Conv2d(160, 64, 3, 1, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 32, 3, 1, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 16, 3, 1, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 1, 3, 1, 1)
+        )
 
     def forward(self, image, features):
         image_conv = self.image_conv(image)
         cat_inputs = torch.cat([image_conv, features], 1)
 
-        kernel = self.feat_kernel(cat_inputs)
-        output = self.pixel_conv(image, kernel)
+        # kernel = self.feat_kernel(cat_inputs)
+        # output = self.pixel_conv(image, kernel)
+
+        output = self.replacement_block(cat_inputs)
 
         residual = self.feat_residual(cat_inputs)
         return output + residual
