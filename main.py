@@ -103,7 +103,7 @@ for epoch in range(opt["epochs"]):
     total_psnr = 0
     images = 1
     for k in range(len(h5_files_val)):
-        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', batch_size=1)
+        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', opt["batch_size"])
         
         for l, data in enumerate(data_loader):
             ground_truth = utils.preprocess(data)
