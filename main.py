@@ -106,7 +106,7 @@ for epoch in range(opt["epochs"]):
         data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', batch_size=1)
         
         for l, data in enumerate(data_loader):
-            ground_truth = torch.unsqueeze(data, 1)/max_pixel_val # add channel dimension to data
+            ground_truth = utils.preprocess(data)
             if torch.cuda.is_available():
                 ground_truth = ground_truth.cuda()
             #####################################
@@ -115,9 +115,9 @@ for epoch in range(opt["epochs"]):
             #####################################
 
             net.eval()
-            if model_name == "udvd":
+            if model_name in ["udvd", "udvd_abl"]:
                 y_pred = net(inputs, kernel, noise)
-            elif model_name == "dncnn":
+            else:
                 y_pred = net(inputs)
             # loss = criterion(y_pred, ground_truth)
 
