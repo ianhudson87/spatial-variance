@@ -6,7 +6,7 @@
     "task_name": "Quarter",
     "quadrant1_stdev": 15,
     "quadrant2_stdev": 25,
-    "quadrant3_stdev": 35,
-    "quadrant4_stdev": 50,
+    "quadrant3_stdev": 50,
+    "quadrant4_stdev": 100,
     "epochs": 50
 }
