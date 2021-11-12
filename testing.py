@@ -35,7 +35,7 @@ if task_index==0:
 elif task_index==1:
     task = VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
 elif task_index==2:
-    task = QuarterTask.Task((opt["quadrant1_stdev", "quadrant2_stdev", "quadrant3_stdev", "quadrant4_stdev"]))
+    task = QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]))
 
 # creating model
 if model_name == "udvd":

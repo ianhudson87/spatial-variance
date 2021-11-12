@@ -81,6 +81,7 @@ step=0
 # Training
 for epoch in range(opt["epochs"]):
     for j in range(len(h5_files_train)):
+        #if step >10: continue
         # getting data loader
         data_loader = dataReader.get_dataloader(h5_files_train[j], 'reconstruction_rss', opt["batch_size"])
         
@@ -139,7 +140,7 @@ for epoch in range(opt["epochs"]):
             # loss = criterion(y_pred, ground_truth)
 
             y_pred = torch.clamp(y_pred, 0., 1.)
-            img_psnr = utils.get_psnr(y_pred, ground_truth, 1)
+            img_psnr = utils.batch_PSNR(y_pred, ground_truth, 1)
             total_psnr += img_psnr
             images += 1
             # writer.add_scalar("val_loss", loss.item(), epoch)
