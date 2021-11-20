@@ -97,16 +97,16 @@ def preprocess(data):
     ground_truth = torch.unsqueeze(data, 1) # add channel dimension to data
     return ground_truth
 
-def get_task(task_name, opt):
+def get_task(task_name, opt, testing=False):
     task_names = get_task_names()
     task_index = task_names.index(task_name)
     if task_index==0:
-        return UndersampleFourierTask.Task(opt["sample_percent"])
+        return UndersampleFourierTask.Task(opt["sample_percent"], testing)
     elif task_index==1:
-        return VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"])
+        return VariableNoiseTask.Task(opt["min_stdev"], opt["max_stdev"], opt["patch_size"], testing)
     elif task_index==2:
         # print(opt)
-        return QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]))
+        return QuarterTask.Task((opt["quadrant1_stdev"], opt["quadrant2_stdev"], opt["quadrant3_stdev"], opt["quadrant4_stdev"]), testing)
     else:
         raise ValueError("couldn't find task:", task_name)
 

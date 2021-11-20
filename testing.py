@@ -29,7 +29,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
 
 # Defining the task to solve
-task = utils.get_task(task_name, opt)
+task = utils.get_task(task_name, opt, testing=True)
 
 # creating model
 net = utils.get_model(model_name)
@@ -73,7 +73,7 @@ for k in range(len(h5_files_test)):
                 ground_truth = ground_truth.cuda()
             #####################################
             # Applying deconstruction to image
-            inputs, kernel, noise = task.get_deconstructed(ground_truth)
+            inputs, kernel, noise = task.get_deconstructed(ground_truth, seed=step)
             #####################################
             net.eval()
             if model_name in ["udvd", "udvd_abl"]:
