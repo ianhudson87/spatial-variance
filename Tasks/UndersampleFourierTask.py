@@ -1,6 +1,7 @@
 import sampleMask
 import torch
 import utils
+import random
 
 ifftshift = torch.fft.ifftshift
 ifft2 = torch.fft.ifft2
@@ -15,7 +16,7 @@ class Task:
         self.sample_percent = sample_percent
         self.testing = testing
 
-    def get_deconstructed(self, data):
+    def get_deconstructed(self, data, seed=None):
         if torch.cuda.is_available():
             data = data.cuda()
         h = data.shape[-2]
@@ -23,7 +24,14 @@ class Task:
         batch_size = data.size()[0]
         
         batch_kspace = fft(data) # move to fourier space
-        batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size, self.testing) # generate mask for fourier space
+        
+        
+        if self.testing:
+            if seed is None:
+                assert ValueError("testing needs seed per datapoint")
+            else:
+                random.seed(seed)
+        batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size) # generate mask for fourier space
         if torch.cuda.is_available():
             batch_sample_mask = batch_sample_mask.cuda()
 

@@ -8,7 +8,7 @@ class Task:
         if testing:
             torch.manual_seed(0)
 
-    def get_deconstructed(self, data):
+    def get_deconstructed(self, data, seed=None):
         if torch.cuda.is_available():
             data = data.cuda()
         h = data.shape[-2]
@@ -19,18 +19,25 @@ class Task:
         batch_size = data.size()[0]
         
         noise = torch.zeros(img.size())
+
+        if self.testing:
+            if seed is None:
+                assert ValueError("testing needs seed per datapoint")
+            else:
+                generator = torch.manual_seed(seed)
+
         for j in range(batch_size):
             # noise for top left quadrant
-            noise[j, 0, 0:mid_h, 0:mid_w] = torch.zeros([mid_h, mid_w]).normal_(mean=0, std=self.stdev_tuple[0]/255.)
+            noise[j, 0, 0:mid_h, 0:mid_w] = torch.zeros([mid_h, mid_w]).normal_(mean=0, std=self.stdev_tuple[0]/255., generator=generator)
 
             # noise for top right quad
-            noise[j, 0, 0:mid_h, mid_w:w] = torch.zeros([mid_h, w-mid_w]).normal_(mean=0, std=self.stdev_tuple[1]/255.)
+            noise[j, 0, 0:mid_h, mid_w:w] = torch.zeros([mid_h, w-mid_w]).normal_(mean=0, std=self.stdev_tuple[1]/255., generator=generator)
 
             # noise for bottom left quad
-            noise[j, 0, mid_h:h, 0:mid_w] = torch.zeros([h-mid_h, mid_w]).normal_(mean=0, std=self.stdev_tuple[2]/255.)
+            noise[j, 0, mid_h:h, 0:mid_w] = torch.zeros([h-mid_h, mid_w]).normal_(mean=0, std=self.stdev_tuple[2]/255., generator=generator)
 
             # noise for bottom right quad
-            noise[j, 0, mid_h:h, mid_w:w] = torch.zeros([mid_h, w-mid_w]).normal_(mean=0, std=self.stdev_tuple[3]/255.)
+            noise[j, 0, mid_h:h, mid_w:w] = torch.zeros([mid_h, w-mid_w]).normal_(mean=0, std=self.stdev_tuple[3]/255., generator=generator)
 
         if torch.cuda.is_available():
             noise = noise.cuda()

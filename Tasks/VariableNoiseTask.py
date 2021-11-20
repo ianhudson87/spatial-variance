@@ -8,10 +8,9 @@ class Task:
         self.noise_min = noise_min
         self.noise_max = noise_max
         self.patch_size = patch_size
-        if testing:
-            torch.manual_seed(0)
+        self.testing = testing
     
-    def get_deconstructed(self, data):
+    def get_deconstructed(self, data, seed=None):
         if torch.cuda.is_available():
             data = data.cuda()
         h = data.shape[-2]
@@ -36,10 +35,17 @@ class Task:
                         col_end_point = w
                     else:
                         col_end_point = patch_size*(col+1)
+                    
+                    if self.testing:
+                        if seed is None:
+                            assert ValueError("testing needs seed per datapoint")
+                        else:
+                            random.seed(seed)
+                            generator = torch.manual_seed(seed)
                     val_noiseL = random.random()*(noise_max - noise_min) + noise_min
                     # print(noise[j,0, opt.patch_size*row:row_end_point, opt.patch_size*col:col_end_point])
                     # print(torch.FloatTensor([row_end_point-opt.patch_size*row, col_end_point-opt.patch_size*col]).normal_(mean=0, std=noiseL))
-                    noise[j, 0, patch_size*row:row_end_point, patch_size*col:col_end_point] = torch.zeros([row_end_point-patch_size*row, col_end_point-patch_size*col]).normal_(mean=0, std=val_noiseL/255.)
+                    noise[j, 0, patch_size*row:row_end_point, patch_size*col:col_end_point] = torch.zeros([row_end_point-patch_size*row, col_end_point-patch_size*col]).normal_(mean=0, std=val_noiseL/255., generator=generator)
         
         kernel = torch.zeros(batch_size, 15, h, w)
         if torch.cuda.is_available():
