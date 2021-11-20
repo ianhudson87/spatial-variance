@@ -3,11 +3,13 @@ import math
 import random
 
 class Task:
-    def __init__(self, noise_min, noise_max, patch_size):
-        print("Using Variable Noise Task!")
+    def __init__(self, noise_min, noise_max, patch_size, testing=False):
+        print("Using Variable Noise Task!" + " for testing" if testing else "", "min_noise", noise_min, "max_noise", noise_max, "patch_size", patch_size)
         self.noise_min = noise_min
         self.noise_max = noise_max
         self.patch_size = patch_size
+        if testing:
+            torch.manual_seed(0)
     
     def get_deconstructed(self, data):
         if torch.cuda.is_available():

@@ -2,9 +2,11 @@ import torch
 import utils
 
 class Task:
-    def __init__(self, stdev_tuple):
-        print("Using Quarters task!")
+    def __init__(self, stdev_tuple, testing=False):
+        print("Using Quarters task!" + " for testing" if testing else "", "stdevs:", stdev_tuple)
         self.stdev_tuple = stdev_tuple
+        if testing:
+            torch.manual_seed(0)
 
     def get_deconstructed(self, data):
         if torch.cuda.is_available():

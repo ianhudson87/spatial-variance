@@ -18,7 +18,9 @@ import random
 
 #     return mask
 
-def get_batch_sample_mask(h, w, p, batch_size):
+def get_batch_sample_mask(h, w, p, batch_size, testing):
+    if testing:
+        random.seed(0)
     if (p<0.2):
         print("bad sample perecentage, too low")
         return None

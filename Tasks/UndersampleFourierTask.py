@@ -10,9 +10,10 @@ fft = torch.fft.fft
 fftshift = torch.fft.fftshift
 
 class Task:
-    def __init__(self, sample_percent):
-        print("Using Undersampling Fourier Space task!")
+    def __init__(self, sample_percent, testing=False):
+        print("Using Undersampling Fourier Space task!" + " for testing" if testing else "", "sample percent", sample_percent)
         self.sample_percent = sample_percent
+        self.testing = testing
 
     def get_deconstructed(self, data):
         if torch.cuda.is_available():
@@ -22,7 +23,7 @@ class Task:
         batch_size = data.size()[0]
         
         batch_kspace = fft(data) # move to fourier space
-        batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size) # generate mask for fourier space
+        batch_sample_mask = sampleMask.get_batch_sample_mask(h, w, self.sample_percent, batch_size, self.testing) # generate mask for fourier space
         if torch.cuda.is_available():
             batch_sample_mask = batch_sample_mask.cuda()
 
