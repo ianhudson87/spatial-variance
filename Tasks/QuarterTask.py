@@ -3,7 +3,7 @@ import utils
 
 class Task:
     def __init__(self, stdev_tuple, testing=False):
-        print("Using Quarters task!" + " for testing" if testing else "", "stdevs:", stdev_tuple)
+        print("Using Quarters task!", "stdevs:", stdev_tuple, "testing", testing)
         self.stdev_tuple = stdev_tuple
         if testing:
             torch.manual_seed(0)

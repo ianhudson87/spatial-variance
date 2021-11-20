@@ -11,7 +11,7 @@ fftshift = torch.fft.fftshift
 
 class Task:
     def __init__(self, sample_percent, testing=False):
-        print("Using Undersampling Fourier Space task!" + " for testing" if testing else "", "sample percent", sample_percent)
+        print("Using Undersampling Fourier Space task!", "sample percent", sample_percent, "testing", testing)
         self.sample_percent = sample_percent
         self.testing = testing
 

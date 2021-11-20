@@ -4,7 +4,7 @@ import random
 
 class Task:
     def __init__(self, noise_min, noise_max, patch_size, testing=False):
-        print("Using Variable Noise Task!" + " for testing" if testing else "", "min_noise", noise_min, "max_noise", noise_max, "patch_size", patch_size)
+        print("Using Variable Noise Task!", "min_noise", noise_min, "max_noise", noise_max, "patch_size", patch_size, "testing", testing)
         self.noise_min = noise_min
         self.noise_max = noise_max
         self.patch_size = patch_size
