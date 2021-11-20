@@ -42,4 +42,6 @@ class Task:
         if torch.cuda.is_available():
             kernel = kernel.cuda()
             noise_output = noise.cuda()
+
+        noisy_image = torch.clamp(noisy_image, 0., 1.)
         return noisy_image, kernel, noise_output

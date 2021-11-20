@@ -36,4 +36,6 @@ class Task:
         if torch.cuda.is_available():
             kernel = kernel.cuda()
             noise = noise.cuda()
+            
+        undersampled_batch_image = torch.clamp(undersampled_batch_image, 0., 1.)
         return undersampled_batch_image, kernel, noise
