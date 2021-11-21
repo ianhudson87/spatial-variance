@@ -42,6 +42,9 @@ class Task:
                         else:
                             random.seed(seed)
                             generator = torch.manual_seed(seed)
+                    else:
+                        generator = None
+                        
                     val_noiseL = random.random()*(noise_max - noise_min) + noise_min
                     # print(noise[j,0, opt.patch_size*row:row_end_point, opt.patch_size*col:col_end_point])
                     # print(torch.FloatTensor([row_end_point-opt.patch_size*row, col_end_point-opt.patch_size*col]).normal_(mean=0, std=noiseL))

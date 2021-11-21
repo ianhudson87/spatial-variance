@@ -24,6 +24,8 @@ class Task:
                 assert ValueError("testing needs seed per datapoint")
             else:
                 generator = torch.manual_seed(seed)
+        else:
+            generator = None
 
         for j in range(batch_size):
             # noise for top left quadrant
