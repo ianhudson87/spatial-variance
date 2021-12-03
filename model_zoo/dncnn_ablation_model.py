@@ -126,10 +126,11 @@ class DnCNNablation_more_dyn(nn.Module):
 
         feat_kernel_layers = []
         feat_kernel_layers.append(nn.Conv2d(channels, 5**2, 3, 1, 1))
-        for _ in range(6):
+        for _ in range(5):
             feat_kernel_layers.append(nn.Conv2d(5**2, 5**2, 3, 1, 1))
             layers.append(nn.BatchNorm2d(5**2))
-            # layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.ReLU(inplace=True))
+        feat_kernel_layers.append(nn.Conv2d(5**2, 5**2, 3, 1, 1))
         self.feat_kernel = nn.Sequential(*feat_kernel_layers)
         self.pixel_conv = PixelConv(scale=1, depthwise=True)
 
