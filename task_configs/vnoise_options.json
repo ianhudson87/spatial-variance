@@ -2,7 +2,7 @@
     "data_folder_name": "singlecoil_val",
     "batch_size": 4,
     "min_stdev": 20,
-    "max_stdev": 50,
+    "max_stdev": 100,
     "patch_size": 20,
     "lr": 1e-5,
     "train_val_split": 0.8,
