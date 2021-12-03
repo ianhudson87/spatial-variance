@@ -5,11 +5,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class UDVDablation(nn.Module):
+class UDVDablation_nodynamic(nn.Module):
     def __init__(self, k, in_channels, depth=15):
         # k = size of dynamic kernel
         super().__init__()
-        print("using UDVD ablation model")
+        print("using UDVD ablation (no dynamic kernel) model")
         self.in_channels = in_channels
         self.head = nn.Conv2d(16 + in_channels, 128, 3, 1, 1)
         body = [ResBlock(128, 3, 0.1) for _ in range(depth)]
@@ -26,16 +26,16 @@ class UDVDablation(nn.Module):
         output2 = self.ComDyConv1(image, body)
         return  output2
 
-class UDVD_upscale(nn.Module):
-    def __init__(self, k, r, in_channels, depth=15):
+class UDVDablation_nofeature(nn.Module):
+    def __init__(self, k, in_channels, depth=15):
+        raise NotImplementedError
         # k = size of dynamic kernel
-        # r = upscaling rate
         super().__init__()
+        print("Using UDVD ablation (no feature map) model")
         self.in_channels = in_channels
         self.head = nn.Conv2d(16 + in_channels, 128, 3, 1, 1)
         body = [ResBlock(128, 3, 0.1) for _ in range(depth)]
         self.body = nn.Sequential(*body)
-        # self.UpDyConv = UpDynamicConv(k, r, in_channels)
         self.ComDyConv1 = CommonDynamicConv(k, in_channels)
 
     def forward(self, image, kernel, noise):
@@ -45,8 +45,8 @@ class UDVD_upscale(nn.Module):
         inputs = torch.cat([image, kernel, noise], 1)
         head = self.head(inputs)
         body = self.body(head) + head
-        output1 = self.UpDyConv(image, body)
-        return  output1
+        output2 = self.ComDyConv1(image, body)
+        return  output2
 
 
 class ResBlock(nn.Module):

@@ -106,6 +106,40 @@ class DnCNNablationTail(nn.Module):
 
         return out
 
+class DnCNNablation_more_dyn(nn.Module):
+    def __init__(self, channels, num_of_layers=14, verbose=False):
+        super(DnCNNablation_more_dyn, self).__init__()
+        print("Using DnCNN better dynamic tail model")
+        kernel_size = 3 # of convolution
+        padding = 1
+        features = 64
+        layers = []
+        layers.append(nn.Conv2d(in_channels=channels, out_channels=features, kernel_size=kernel_size, padding=padding, bias=False))
+        layers.append(nn.ReLU(inplace=True))
+        for _ in range(num_of_layers-4):
+            layers.append(nn.Conv2d(in_channels=features, out_channels=features, kernel_size=kernel_size, padding=padding, bias=False))
+            layers.append(nn.BatchNorm2d(features))
+            layers.append(nn.ReLU(inplace=True))
+        layers.append(nn.Conv2d(in_channels=features, out_channels=channels, kernel_size=kernel_size, padding=padding, bias=False))
+        self.dncnn = nn.Sequential(*layers)
+
+
+        feat_kernel_layers = []
+        feat_kernel_layers.append(nn.Conv2d(channels, 5**2, 3, 1, 1))
+        for _ in range(6):
+            feat_kernel_layers.append(nn.Conv2d(5**2, 5**2, 3, 1, 1))
+        self.feat_kernel = nn.Sequential(*feat_kernel_layers)
+        self.pixel_conv = PixelConv(scale=1, depthwise=True)
+
+        self.verbose = verbose
+    def forward(self, x):
+        x = self.dncnn(x)
+
+        kernel = self.feat_kernel(x)
+        out = self.pixel_conv(x, kernel)
+
+        return out
+
 class DnCNNablationFull(nn.Module):
     def __init__(self, channels, num_of_layers=14, verbose=False):
         super(DnCNNablationFull, self).__init__()

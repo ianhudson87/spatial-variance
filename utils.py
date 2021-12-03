@@ -11,8 +11,8 @@ from Tasks import QuarterTask, UndersampleFourierTask, VariableNoiseTask
 from model_zoo.udvd_model import UDVD
 from model_zoo.dncnn_model import DnCNN
 from model_zoo.unet_model import UNet
-from model_zoo.udvd_ablation_model import UDVDablation
-from model_zoo.dncnn_ablation_model import DnCNNablationTail, DnCNNablationFull, DnCNNablationHead, DnCNNablationMiddle
+from model_zoo.udvd_ablation_model import UDVDablation_nodynamic
+from model_zoo.dncnn_ablation_model import DnCNNablationTail, DnCNNablationFull, DnCNNablationHead, DnCNNablationMiddle, DnCNNablation_more_dyn
 
 def imshow(img, swap_axes=False):
     if swap_axes:
@@ -121,7 +121,7 @@ def get_model(model_name):
     elif model_index == 2:
         return UNet(in_channels=1)
     elif model_index == 3:
-        return UDVDablation(k=5, in_channels=1, depth=5)
+        return UDVDablation_nodynamic(k=5, in_channels=1, depth=5)
     elif model_index == 4:
         return DnCNNablationHead(channels=1)
     elif model_index == 5:
@@ -130,11 +130,13 @@ def get_model(model_name):
         return DnCNNablationTail(channels=1)
     elif model_index == 7:
         return DnCNNablationFull(channels=1)
+    elif model_index == 8:
+        return DnCNNablation_more_dyn(channels=1)
     else:
         raise ValueError("couldn't find model:", model_name)
 
 def get_model_names():
-    return ["udvd", "dncnn", "unet", "udvd_abl", "dncnn_abl_head", "dncnn_abl_mid", "dncnn_abl_tail", "dncnn_abl_full"]
+    return ["udvd", "dncnn", "unet", "udvd_abl_nodyn", "dncnn_abl_head", "dncnn_abl_mid", "dncnn_abl_tail", "dncnn_abl_full", "dncnn_abl_moredyn"]
 
 def get_task_names():
     return ["undersample", "vnoise", "quarter"]

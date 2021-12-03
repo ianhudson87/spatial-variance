@@ -60,6 +60,8 @@ h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_sp
 
 step=0
 
+print(sum([param.nelement() for param in net.parameters()]))
+
 # Training
 for epoch in range(opt["epochs"]):
     for j in range(len(h5_files_train)):
