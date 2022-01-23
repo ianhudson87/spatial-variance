@@ -1,14 +1,14 @@
 import sampleMask
-import torch
+import torch, torch.fft
 import utils
 import random
 
-ifftshift = torch.fft.ifftshift
-ifft2 = torch.fft.ifft2
-ifftn = torch.fft.ifftn
+# ifftshift = torch.fft.ifftshift
+# ifft2 = torch.fft.ifft2
+# ifftn = torch.fft.ifftn
 ifft = torch.fft.ifft
 fft = torch.fft.fft
-fftshift = torch.fft.fftshift
+# fftshift = torch.fft.fftshift
 
 class Task:
     def __init__(self, sample_percent, testing=False):
