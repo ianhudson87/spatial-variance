@@ -35,3 +35,14 @@ def get_batch_sample_mask(h, w, p, batch_size):
             mask[batch, 0, :, column] = 1
 
     return mask
+
+def sample_image(image_batch, p):
+    h = image_batch.shape[-2]
+    w = image_batch.shape[-1]
+    batch_size = image_batch.shape[0]
+    batch_sample_mask = get_batch_sample_mask(h, w, p, batch_size)
+
+    if torch.cuda.is_available():
+        batch_sample_mask = batch_sample_mask.cuda()
+
+    return image_batch * batch_sample_mask
