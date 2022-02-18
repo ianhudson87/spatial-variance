@@ -205,7 +205,7 @@ def methodC(var_prediction, given_measurement, iterations, denoising_net, decons
 
     return var_prediction
 
-def methodC_grad(var_prediction, given_measurement, iterations, denoising_net, deconstructed, ground_truth, measurement_sample_mask, denoiser_scale=1, denoiser_weight=1, verbose=False):
+def methodC_grad(var_prediction, given_measurement, iterations, denoising_net, deconstructed, ground_truth, measurement_sample_mask, image_num, denoiser_scale=1, denoiser_weight=1, verbose=False):
     # assumes prior is L-2 norm squared
     # var_prediction = x^t
     # given_measurement = y
@@ -218,12 +218,13 @@ def methodC_grad(var_prediction, given_measurement, iterations, denoising_net, d
     # returns: final prediction (x^(t_final))
     # print(deconstructed)
     # print(var_prediction)
-    psnr_of_measurement = utils.get_psnr(ground_truth, deconstructed)
-    writer.add_image("TEST", torch.fft.fft(torch.absolute(torch.fft.ifft(given_measurement)[0])))
-    print("psnr of given measurement to gt: ", psnr_of_measurement)
-    writer.add_image(f"given measurement (pixelspace), psnr_to_gt:{psnr_of_measurement}", deconstructed[0].cpu())
-    writer.add_image("ground truth (pixelspace)", ground_truth[0].cpu())
-    
+    # psnr_of_measurement = utils.get_psnr(ground_truth, deconstructed)
+    # writer.add_image("TEST", torch.fft.fft(torch.absolute(torch.fft.ifft(given_measurement)[0])))
+    # print("psnr of given measurement to gt: ", psnr_of_measurement)
+    # writer.add_image(f"given measurement (pixelspace), psnr_to_gt:{psnr_of_measurement}", deconstructed[0].cpu())
+    # writer.add_image("ground truth (pixelspace)", ground_truth[0].cpu())
+    max_psnr_value, max_ssim_values = 0, 0
+
     for iteration in range(iterations):
         ######################### STEP 1 #########################
         Ax = measurement_sample_mask * torch.fft.fft(var_prediction) # MFx
@@ -255,31 +256,37 @@ def methodC_grad(var_prediction, given_measurement, iterations, denoising_net, d
         ################# METRICS #######################
 
         # psnr_measurement = utils.get_psnr(deconstructed, denoised)
-        psnr_gt = utils.get_psnr(ground_truth, prediction.detach())
-        if iteration % 500 == 0:
-            writer.add_image(f"iter:{iteration}, psnr_to_gt:{psnr_gt}", denoised[0].cpu())
+        psnr_value = utils.get_psnr(ground_truth, prediction.detach())
+        ssim_value = utils.get_psnr(ground_truth, prediction.detach())
+
+        max_psnr_value = max(psnr_value, max_psnr_value)
+        max_ssim_value = max(ssim_value, max_ssim_value)
+        # if iteration % 500 == 0:
+        #     writer.add_image(f"iter:{iteration}, psnr_to_gt:{psnr_val}", denoised[0].cpu())
         # utils.imshow(denoised[0][0].cpu())
         # This also clears the gradients from var_prediction
 
         # print(deconstructed)
         # print(denoised)
         # writer.add_scalar("psnr to measurment", psnr_measurement, iteration)
-        writer.add_scalar("psnr to GT", psnr_gt, iteration)
-        print(f"step {iteration} PSNR_gt: ", psnr_gt)
+        writer.add_scalar(f"image_num_{image_num} psnr to GT", psnr_val, iteration)
+        if verbose: print(f"step {iteration} PSNR: ", psnr_val)
 
-    return var_prediction
+    return var_prediction, max_psnr_value, max_ssim_value
+
+
+
+image_num=0
+deconstructed_psnr_values, deconstructed_ssim_values = [], []
+supervised_psnr_values, supervised_ssim_values = [], []
+modelbased_final_psnr_values, modelbased_final_ssim_values = [], []
+modelbased_max_psnr_values, modelbased_max_ssim_values = [], []
 
 for k in range(len(h5_files_test)):
     data_loader = dataReader.get_dataloader(h5_files_test[k], 'reconstruction_rss', batch_size=batch_size)
 
-    dncnn_psnr_values = []
-    dncnn_ssim_values = []
-    modelbased_final_psnr_values = []
-    modelbased_max_psnr_values = []
-    modelbased_ssim_values = []
-
     for i, data in enumerate(data_loader):
-        if i != 15: continue
+        image_num += 1
 
         ground_truth = utils.preprocess(data) # ground truth is pixel space
         utils.save_image(ground_truth, out_folder, f"{str(i)}_groundTruth")
@@ -289,6 +296,9 @@ for k in range(len(h5_files_test)):
         utils.save_image(deconstructed, out_folder, f"{str(i)}_noisy")
         # undersampled_kspace = y = given measurement
         # deconstructed = F^(-1) y = initial guess TODO: check this
+        deconstructed_psnr, deconstructed_ssim = utils.get_psnr(ground_truth, deconstructed), utils.get_ssim(ground_truth, deconstructed)
+        deconstructed_psnr_values.append(deconstructed_psnr)
+        deconstructed_ssim_values.append(deconstructed_ssim)
 
         ################### MODEL BASED LEARNING #######################
 
@@ -297,17 +307,33 @@ for k in range(len(h5_files_test)):
         var_prediction = Variable(prediction, requires_grad=True) # allows you to calculate gradient with respect to this variable later
         # prediction = x^t = current guess
 
-        final_prediction = methodC_grad(var_prediction, undersampled_kspace, iterations, denoiser_net, deconstructed, ground_truth, sample_mask, denoiser_scale=1, denoiser_weight=1e-3)
-        # print("predictionC", final_prediction)
-        utils.save_image(final_prediction.detach(), out_folder, f"{str(i)}_modelbased")
-        print("model_shape", final_prediction.shape)
+        modelbased_prediction, max_psnr, max_ssim = methodC_grad(var_prediction, undersampled_kspace, iterations, denoiser_net, deconstructed, ground_truth, sample_mask,
+                                                    image_num=image_num, denoiser_scale=1, denoiser_weight=1e-3)
+        # print("predictionC", modelbased_prediction)
+        utils.save_image(modelbased_prediction.detach(), out_folder, f"{str(i)}_modelbased")
+
+        modelbased_max_psnr_values.append(max_psnr)
+        modelbased_max_ssim_values.append(max_ssim)
+        print("model_shape", modelbased_prediction.shape)
+
+        model_based_final_psnr, model_based_final_ssim = utils.get_psnr(ground_truth, modelbased_prediction), utils.get_ssim(ground_truth, modelbased_prediction)
+        modelbased_final_psnr_values.append(model_based_final_psnr)
+        modelbased_final_ssim_values.append(model_based_final_ssim)
 
         #################### SUPERVISED LEARNING (DNCNN) ################
+
         supervised_learning_prediction = artifact_net(deconstructed)
         print("supervised_shape", supervised_learning_prediction.shape)
+        supervised_psnr, supervised_ssim = utils.get_psnr(ground_truth, supervised_learning_prediction), utils.get_ssim(ground_truth, supervised_learning_prediction)
+        supervised_psnr_values.append(supervised_psnr)
+        supervised_ssim_values.append(supervised_ssim)
     break
 
+utils.write_test_file(deconstructed_psnr_values, deconstructed_ssim_values, out_folder, "deconstructed")
+utils.write_test_file(supervised_psnr_values, supervised_ssim_values, out_folder, "supervised")
+utils.write_test_file(modelbased_final_psnr_values, modelbased_final_ssim_values, out_folder, "modelbased_final")
+utils.write_test_file(modelbased_max_psnr_values, modelbased_max_ssim_values, out_folder, "modelbased_max")
 
-print("prediction", final_prediction)
+# print("prediction", final_prediction)
 
     
