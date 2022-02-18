@@ -1,7 +1,7 @@
 {
     "data_folder_name": "singlecoil_val",
     "batch_size": 4,
-    "sample_percent": 0.2,
+    "sample_percent": 0.4,
     "lr": 1e-5,
     "train_val_split": 0.8,
     "task_name": "Undersample",

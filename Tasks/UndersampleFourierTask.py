@@ -16,7 +16,7 @@ class Task:
         self.sample_percent = sample_percent
         self.testing = testing
 
-    def get_deconstructed(self, data, seed=None, get_undersampled_kspace=False):
+    def get_deconstructed(self, data, seed=None, get_undersampled_kspace=False, get_sample_mask=False):
         if torch.cuda.is_available():
             data = data.cuda()
         h = data.shape[-2]
@@ -48,7 +48,12 @@ class Task:
             
         undersampled_batch_image = torch.clamp(undersampled_batch_image, 0., 1.)
 
+        output = [undersampled_batch_image, kernel, noise]
+
         if get_undersampled_kspace:
-            return undersampled_batch_image, kernel, noise, undersampled_batch_kspace
-        else:
-            return undersampled_batch_image, kernel, noise 
+            output.append(undersampled_batch_kspace)
+
+        if get_sample_mask:
+            output.append(batch_sample_mask)
+
+        return tuple(output) 

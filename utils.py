@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import json
 import numpy as np
@@ -69,8 +71,11 @@ def get_ssim(img_true, img_test):
 def float_str(x, places):
     return ("{:." + str(places) + "f}").format(x)
 
-def write_test_file(psnr_vals, ssim_vals, folder):
-    path = os.path.join("test_logs", folder, "_stats.txt")
+def write_test_file(psnr_vals, ssim_vals, folder, file_name=None):
+    if file_name:
+        path = os.path.join("test_logs", folder, f"_{file_name}.txt")
+    else:
+        path = os.path.join("test_logs", folder, "_stats.txt")
     f = open(path, "w")
     f.write("psnr, ssim" + "\n")
     for k in range(len(psnr_vals)):
