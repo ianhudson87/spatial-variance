@@ -13,18 +13,16 @@ random.seed(0)
 gpu_num = input("gpu num:")
 
 data_path = os.path.join("data", "singlecoil_val")
-iterations = 5000
 batch_size = 1
 mri_image_type = 'reconstruction_rss'
 task_name = "undersample"
-learning_rate = 3e-3
 os.environ["CUDA_VISIBLE_DEVICES"]=gpu_num
 denoiser_model_name = "dncnn"
 artifact_model_name = "dncnn"
 denoiser_checkpoint_name = "dncnn_constant_noise_1-31-15-47"
 artifact_checkpoint_name = "dncnn_Undersample_2-2-5-46"
 epoch = 50
-out_folder = "modelbased_learning" + str(1)
+out_folder = "modelbased_learning_" + "new"
 out_path = os.path.join("test_logs", out_folder)
 writer = SummaryWriter(log_dir=out_path)
 
@@ -35,13 +33,18 @@ if torch.cuda.is_available():
     denoiser_net.cuda()
     artifact_net.cuda()
 
-# load the checkpoint
-checkpoint = torch.load(f'./runs/{checkpoint_name}/net{epoch}.pth')
-denoiser_net.load_state_dict(checkpoint['net'])
+# load the checkpoints
+denoiser_checkpoint = torch.load(f'./runs/{denoiser_checkpoint_name}/net{epoch}.pth')
+denoiser_net.load_state_dict(denoiser_checkpoint['net'])
 
+artifact_checkpoint = torch.load(f'./runs/{artifact_checkpoint_name}/net{epoch}.pth')
+artifact_net.load_state_dict(artifact_checkpoint['net'])
+artifact_net.eval()
+
+# get config about the undersample task
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
 
-task = utils.get_task(task_name, opt)
+task = utils.get_task(task_name, opt, testing=True)
 
 # Getting data
 data_path = os.path.join("data", opt["data_folder_name"])
@@ -205,63 +208,77 @@ def methodC(var_prediction, given_measurement, iterations, denoising_net, decons
 
     return var_prediction
 
-def methodC_grad(var_prediction, given_measurement, iterations, denoising_net, deconstructed, ground_truth, measurement_sample_mask, image_num, denoiser_scale=1, denoiser_weight=1, verbose=False):
+def methodC_grad(prediction, given_measurement, denoising_net,
+                deconstructed, ground_truth,
+                measurement_sample_mask, image_num,
+                params, verbose=False):
     # assumes prior is L-2 norm squared
-    # var_prediction = x^t
+    # prediction = x^t
     # given_measurement = y
     # denoising_net = denoiser with pretrained weights
     # deconstructed = pixel space of given measurement ie F^-1(y)
     # ground_truth = pixel space ground truth
-    # denoiser_scale = kamilov's method (default=1)
-    # denoiser_weight = my method (default=1)
     # measurement_sample_mask = sample mask used on y
+    # model parameters:
+        # lr: learning rate
+        # denoiser_scale = kamilov's method (default=1)
+        # denoiser_weight = my method (default=1)
+        # min_residual = stop after residual is below this value
+        # max_iter = maximum number of iterations
+
     # returns: final prediction (x^(t_final))
-    # print(deconstructed)
+
+    # print("decon", deconstructed)
     # print(var_prediction)
-    # psnr_of_measurement = utils.get_psnr(ground_truth, deconstructed)
+    psnr_of_measurement = utils.get_psnr(ground_truth, deconstructed)
     # writer.add_image("TEST", torch.fft.fft(torch.absolute(torch.fft.ifft(given_measurement)[0])))
-    # print("psnr of given measurement to gt: ", psnr_of_measurement)
+    print("psnr of given measurement to gt: ", psnr_of_measurement)
     # writer.add_image(f"given measurement (pixelspace), psnr_to_gt:{psnr_of_measurement}", deconstructed[0].cpu())
     # writer.add_image("ground truth (pixelspace)", ground_truth[0].cpu())
-    max_psnr_value, max_ssim_values = 0, 0
+    
 
-    for iteration in range(iterations):
+    for iteration in range(params["max_iter"]):
+        prev_prediction = prediction
         ######################### STEP 1 #########################
-        Ax = measurement_sample_mask * torch.fft.fft(var_prediction) # MFx
-        A_trans_Ax = torch.absolute(torch.fft.ifft(measurement_sample_mask * Ax)) # F^{-1}MMFx
+        inner_val = measurement_sample_mask * torch.fft.fft(prediction) - given_measurement # Hx - y
+        gradient = torch.real(torch.fft.ifft(measurement_sample_mask * inner_val)) # H^T (Hx - y) 
 
-        A_trans_y = torch.absolute(torch.fft.ifft(measurement_sample_mask * given_measurement))
+        # Ax = measurement_sample_mask * torch.fft.fft(var_prediction) # MFx
+        # A_trans_Ax = torch.real(torch.fft.ifft(measurement_sample_mask * Ax)) # F^{-1}MMFx
 
-        negative_gradient = -A_trans_Ax + A_trans_y
+        # A_trans_y = torch.real(torch.fft.ifft(measurement_sample_mask * given_measurement)) #
+
+        # negative_gradient = -A_trans_Ax + A_trans_y
 
         # distance = measurement_sample_mask * torch.fft.fft(var_prediction) - given_measurement
         # gradient1 = -torch.absolute(torch.fft.ifft(measurement_sample_mask * (distance)))
         # gradient = torch.absolute(torch.fft.ifft(measurement_sample_mask * (distance)))
-        if verbose: print("negative_grad", negative_gradient)
+        if verbose: print("norm of grad", torch.norm(gradient))
         # distance = MFx - y
         # gradient = F^{-1}M (MFx - y) = A^T(Ax - y)
         
-        intermediate_prediction = var_prediction + learning_rate * negative_gradient
+        intermediate_prediction = torch.clamp(prediction - params["lr"] * gradient, 0., 1.)
         if verbose: print("inter", intermediate_prediction)
         # print(torch.clamp(intermediate_prediction, 0., 1.))
 
+        prediction = intermediate_prediction
         ######################### STEP 2 #########################
 
         # Apply denoising to the intermediate prediction
-        denoised = torch.clamp((1/denoiser_scale) * denoising_net(intermediate_prediction * denoiser_scale), 0., 1.)
-        prediction = denoiser_weight * denoised + (1-denoiser_weight) * intermediate_prediction
-        var_prediction = Variable(prediction, requires_grad=True)
+        denoised = torch.clamp((1/params["denoiser_scale"]) * denoising_net(intermediate_prediction * params["denoiser_scale"]), 0., 1.)
+        prediction = params["denoiser_weight"] * denoised + (1-params["denoiser_weight"]) * intermediate_prediction
+        prediction = prediction.detach()
 
-        if verbose: print("prediction", prediction)
         ################# METRICS #######################
 
         # psnr_measurement = utils.get_psnr(deconstructed, denoised)
-        psnr_value = utils.get_psnr(ground_truth, prediction.detach())
-        ssim_value = utils.get_psnr(ground_truth, prediction.detach())
+        psnr_value = utils.get_psnr(ground_truth, prediction)
+        ssim_value = utils.get_ssim(ground_truth, prediction)
+        residual = torch.square(torch.norm(prediction - prev_prediction)) / torch.square(torch.norm(prediction))
+        objective_fun = torch.norm(torch.absolute(inner_val))
 
-        max_psnr_value = max(psnr_value, max_psnr_value)
-        max_ssim_value = max(ssim_value, max_ssim_value)
-        # if iteration % 500 == 0:
+        if iteration % 50 == 0:
+            print(image_num, psnr_value)
         #     writer.add_image(f"iter:{iteration}, psnr_to_gt:{psnr_val}", denoised[0].cpu())
         # utils.imshow(denoised[0][0].cpu())
         # This also clears the gradients from var_prediction
@@ -269,10 +286,17 @@ def methodC_grad(var_prediction, given_measurement, iterations, denoising_net, d
         # print(deconstructed)
         # print(denoised)
         # writer.add_scalar("psnr to measurment", psnr_measurement, iteration)
-        writer.add_scalar(f"image_num_{image_num} psnr to GT", psnr_val, iteration)
-        if verbose: print(f"step {iteration} PSNR: ", psnr_val)
+        writer.add_scalar(f"image_num_{image_num} psnr to GT", psnr_value, iteration)
+        writer.add_scalar(f"image_num_{image_num} ssim to GT", ssim_value, iteration)
+        writer.add_scalar(f"image_num_{image_num} residual", residual, iteration)
+        writer.add_scalar(f"image_num_{image_num} objective function", objective_fun, iteration)
+        if verbose: print(f"step {iteration} PSNR: ", psnr_value)
 
-    return var_prediction, max_psnr_value, max_ssim_value
+        if residual < params["min_residual"] or iteration > params["max_iter"]:
+            print("stop due to residual" if residual < params["min_residual"] else "reached max_iter")
+            break
+
+    return prediction
 
 
 
@@ -291,7 +315,7 @@ for k in range(len(h5_files_test)):
         ground_truth = utils.preprocess(data) # ground truth is pixel space
         utils.save_image(ground_truth, out_folder, f"{str(i)}_groundTruth")
 
-        deconstructed, kernel, noise, undersampled_kspace, sample_mask = task.get_deconstructed(ground_truth, get_undersampled_kspace=True, get_sample_mask=True)
+        deconstructed, kernel, noise, undersampled_kspace, sample_mask = task.get_deconstructed(ground_truth, seed=image_num, get_undersampled_kspace=True, get_sample_mask=True)
         # print("deconstructed", deconstructed, torch.norm(deconstructed))
         utils.save_image(deconstructed, out_folder, f"{str(i)}_noisy")
         # undersampled_kspace = y = given measurement
@@ -300,39 +324,50 @@ for k in range(len(h5_files_test)):
         deconstructed_psnr_values.append(deconstructed_psnr)
         deconstructed_ssim_values.append(deconstructed_ssim)
 
+        #################### SUPERVISED LEARNING (DNCNN) ################
+        supervised_learning_prediction = torch.clamp(artifact_net(deconstructed), 0., 1.).detach()
+        # for p in artifact_net.parameters():
+        #         print (p.data[0][0][0][0])
+        #         break
+        utils.save_image(supervised_learning_prediction, out_folder, f"{str(i)}_supervised")
+        # print("supervised_shape", supervised_learning_prediction.shape)
+        supervised_psnr, supervised_ssim = utils.get_psnr(ground_truth, supervised_learning_prediction), utils.get_ssim(ground_truth, supervised_learning_prediction)
+        supervised_psnr_values.append(supervised_psnr)
+        supervised_ssim_values.append(supervised_ssim)
+        ####################################################################
+        # break
+
         ################### MODEL BASED LEARNING #######################
 
         # prediction = copy.copy(deconstructed)
         prediction = torch.zeros(deconstructed.shape).cuda()
-        var_prediction = Variable(prediction, requires_grad=True) # allows you to calculate gradient with respect to this variable later
+        # var_prediction = Variable(prediction, requires_grad=True) # allows you to calculate gradient with respect to this variable later
         # prediction = x^t = current guess
-
-        modelbased_prediction, max_psnr, max_ssim = methodC_grad(var_prediction, undersampled_kspace, iterations, denoiser_net, deconstructed, ground_truth, sample_mask,
-                                                    image_num=image_num, denoiser_scale=1, denoiser_weight=1e-3)
+        params = {
+            "lr": ,
+            "denoiser_scale": 1,
+            "denoiser_weight": 1,
+            "min_residual": 1e-9,
+            "max_iter": 3000,
+        }
+        modelbased_prediction = methodC_grad(prediction, undersampled_kspace, denoiser_net,
+                                                    deconstructed, ground_truth, sample_mask, image_num,
+                                                    params)
         # print("predictionC", modelbased_prediction)
         utils.save_image(modelbased_prediction.detach(), out_folder, f"{str(i)}_modelbased")
 
-        modelbased_max_psnr_values.append(max_psnr)
-        modelbased_max_ssim_values.append(max_ssim)
-        print("model_shape", modelbased_prediction.shape)
+        # print("model_shape", modelbased_prediction.shape)
 
         model_based_final_psnr, model_based_final_ssim = utils.get_psnr(ground_truth, modelbased_prediction), utils.get_ssim(ground_truth, modelbased_prediction)
         modelbased_final_psnr_values.append(model_based_final_psnr)
         modelbased_final_ssim_values.append(model_based_final_ssim)
-
-        #################### SUPERVISED LEARNING (DNCNN) ################
-
-        supervised_learning_prediction = artifact_net(deconstructed)
-        print("supervised_shape", supervised_learning_prediction.shape)
-        supervised_psnr, supervised_ssim = utils.get_psnr(ground_truth, supervised_learning_prediction), utils.get_ssim(ground_truth, supervised_learning_prediction)
-        supervised_psnr_values.append(supervised_psnr)
-        supervised_ssim_values.append(supervised_ssim)
-    break
+        ################################################################
+        # break
+    # break
 
 utils.write_test_file(deconstructed_psnr_values, deconstructed_ssim_values, out_folder, "deconstructed")
 utils.write_test_file(supervised_psnr_values, supervised_ssim_values, out_folder, "supervised")
 utils.write_test_file(modelbased_final_psnr_values, modelbased_final_ssim_values, out_folder, "modelbased_final")
-utils.write_test_file(modelbased_max_psnr_values, modelbased_max_ssim_values, out_folder, "modelbased_max")
 
 # print("prediction", final_prediction)
 

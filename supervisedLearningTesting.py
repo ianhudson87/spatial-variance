@@ -81,6 +81,10 @@ for k in range(len(h5_files_test)):
             else:
                 y_pred = net(inputs)
             # loss = criterion(y_pred, ground_truth)
+
+            for p in net.parameters():
+                print (p.data[0][0][0][0])
+                break
             
             with torch.no_grad():
                 y_pred = torch.clamp(y_pred, 0., 1.)
