@@ -11,18 +11,21 @@ import random
 random.seed(0)
 
 gpu_num = input("gpu num:")
+test_name = input("test name:")
 
 data_path = os.path.join("data", "singlecoil_val")
 batch_size = 1
 mri_image_type = 'reconstruction_rss'
 task_name = "undersample"
 os.environ["CUDA_VISIBLE_DEVICES"]=gpu_num
-denoiser_model_name = "dncnn"
+# denoiser_model_name = "dncnn"
+denoiser_model_name = "dncnn_spec"
 artifact_model_name = "dncnn"
-denoiser_checkpoint_name = "dncnn_constant_noise_1-31-15-47"
+# denoiser_checkpoint_name = "dncnn_constant_noise_1-31-15-47"
+denoiser_checkpoint_name = "dncnn_spec_constant_noise_2-24-16-2"
 artifact_checkpoint_name = "dncnn_Undersample_2-2-5-46"
 epoch = 50
-out_folder = "modelbased_learning_" + "new"
+out_folder = "modelbased_learning_" + test_name
 out_path = os.path.join("test_logs", out_folder)
 writer = SummaryWriter(log_dir=out_path)
 
@@ -50,6 +53,7 @@ task = utils.get_task(task_name, opt, testing=True)
 data_path = os.path.join("data", opt["data_folder_name"])
 h5_files = glob.glob(os.path.join(data_path, "*.h5"))
 h5_files_test = utils.get_testing_data(h5_files)
+h5_files_train, h5_files_val = utils.train_val_split(h5_files, opt["train_val_split"])
 
 def methodA(var_prediction, given_measurement, iterations):
     # var_prediction = x^t
@@ -208,7 +212,7 @@ def methodC(var_prediction, given_measurement, iterations, denoising_net, decons
 
     return var_prediction
 
-def methodC_grad(prediction, given_measurement, denoising_net,
+def iterative_method(prediction, given_measurement, denoising_net,
                 deconstructed, ground_truth,
                 measurement_sample_mask, image_num,
                 params, verbose=False):
@@ -261,7 +265,6 @@ def methodC_grad(prediction, given_measurement, denoising_net,
         if verbose: print("inter", intermediate_prediction)
         # print(torch.clamp(intermediate_prediction, 0., 1.))
 
-        prediction = intermediate_prediction
         ######################### STEP 2 #########################
 
         # Apply denoising to the intermediate prediction
@@ -298,26 +301,141 @@ def methodC_grad(prediction, given_measurement, denoising_net,
 
     return prediction
 
+def iterative_red(prediction, given_measurement, denoising_net,
+                deconstructed, ground_truth,
+                measurement_sample_mask, image_num,
+                params, verbose=False, return_final_psnr=False):
+    # params:
+        # lr: learning rate
+        # tau: RED weight parameter
+        # min_residual = stop after residual is below this value
+        # max_iter = maximum number of iterations
 
+    for iteration in range(params["max_iter"]):
+        prev_prediction = prediction
+        ######################### doing the calculation #########################
+        inner_val = measurement_sample_mask * torch.fft.fft(prediction) - given_measurement # Hx - y
+        gradient = torch.real(torch.fft.ifft(measurement_sample_mask * inner_val)) # H^T (Hx - y) 
 
-image_num=0
+        denoised = torch.clamp(denoising_net(prediction), 0., 1.).detach()
+        prediction = prediction - params["lr"] * (gradient + params["tau"] * (prediction - denoised))
+
+        ################# METRICS #######################
+
+        # psnr_measurement = utils.get_psnr(deconstructed, denoised)
+        psnr_value = utils.get_psnr(ground_truth, prediction)
+        ssim_value = utils.get_ssim(ground_truth, prediction)
+        residual = torch.square(torch.norm(prediction - prev_prediction)) / torch.square(torch.norm(prediction))
+        objective_fun = torch.norm(torch.absolute(inner_val))
+
+        if iteration % 500 == 0:
+            print(image_num, psnr_value)
+        writer.add_scalar(f"image_num_{image_num} psnr to GT", psnr_value, iteration)
+        writer.add_scalar(f"image_num_{image_num} ssim to GT", ssim_value, iteration)
+        writer.add_scalar(f"image_num_{image_num} residual", residual, iteration)
+        writer.add_scalar(f"image_num_{image_num} objective function", objective_fun, iteration)
+        if verbose: print(f"step {iteration} PSNR: ", psnr_value)
+
+        if residual < params["min_residual"] or iteration > params["max_iter"]:
+            print("stop due to residual" if residual < params["min_residual"] else "reached max_iter")
+            break
+
+    if return_final_psnr:
+        return prediction, psnr_value
+
+    return prediction
+
 deconstructed_psnr_values, deconstructed_ssim_values = [], []
 supervised_psnr_values, supervised_ssim_values = [], []
 modelbased_final_psnr_values, modelbased_final_ssim_values = [], []
 modelbased_max_psnr_values, modelbased_max_ssim_values = [], []
 
+def iterative_red_grid_search(lr_values, tau_values, min_residual_values, max_iter, image_test_nums):
+    # returns optimal lr and tau values using RED
+    testing_images = []
+    best_params = None
+    best_psnr = 0
+    history = {}
+
+    image_num = -1
+    for k in range(len(h5_files_val)):
+        data_loader = dataReader.get_dataloader(h5_files_val[k], 'reconstruction_rss', batch_size=batch_size)
+        for i, data in enumerate(data_loader):
+            image_num += 1
+            if image_num in image_test_nums:
+                testing_images.append(data)
+
+    for lr in lr_values:
+        for tau in tau_values:
+            for min_residual in min_residual_values:
+                psnr_values = [] # for each testing image, we get a psnr value
+                for i, data in enumerate(testing_images):
+                    ground_truth = utils.preprocess(data) # ground truth is pixel space
+                    writer.add_image(f"gridsearch img {i}", ground_truth[0].cpu())
+                    deconstructed, kernel, noise, undersampled_kspace, sample_mask = task.get_deconstructed(ground_truth, seed=image_num, get_undersampled_kspace=True, get_sample_mask=True)
+                    prediction = torch.zeros(deconstructed.shape).cuda()
+                    iterative_red_params = {
+                        "lr": lr,
+                        "tau": tau,
+                        "min_residual": min_residual,
+                        "max_iter": max_iter,
+                    }
+                    modelbased_prediction, final_psnr = iterative_red(prediction, undersampled_kspace, denoiser_net,
+                                                        deconstructed, ground_truth, sample_mask, 0,
+                                                        iterative_red_params, return_final_psnr=True)
+                    psnr_values.append(final_psnr)
+                average_psnr = sum(psnr_values) / len(psnr_values)
+                history[tuple([val for val in iterative_red_params.values()])] = average_psnr
+
+                if average_psnr > best_psnr:
+                    best_psnr = average_psnr
+                    best_params = copy.copy(iterative_red_params)
+
+    return {
+        "history": history,
+        "best_params": best_params,
+        "best_psnr": best_psnr
+    }
+    
+# grid_search_out = iterative_red_grid_search(
+#     lr_values = [1, 0.5, 0.25, 0.1, 0.001],
+#     tau_values = [1, 0.5, 0.25, 0.1, 0.001],
+#     min_residual_values = [1e-9, 1e-10, 1e-11],
+#     max_iter = 2000,
+#     image_test_num=15)
+
+grid_search_out = iterative_red_grid_search(
+    lr_values = [1, 0.5, 0.25, 0.1],
+    tau_values = [0.25, 0.1, 0.01, 0.001],
+    min_residual_values = [1e-10],
+    max_iter = 2000,
+    image_test_nums=[1, 15, 30])
+print(grid_search_out)
+
+iterative_red_params = grid_search_out["best_params"]
+
+
+iterative_params = {
+            "lr": 1,
+            "denoiser_scale": 1,
+            "denoiser_weight": 0.001,
+            "min_residual": 1e-10,
+            "max_iter": 600,
+}
+
+image_num = -1
 for k in range(len(h5_files_test)):
+    print("k")
     data_loader = dataReader.get_dataloader(h5_files_test[k], 'reconstruction_rss', batch_size=batch_size)
 
     for i, data in enumerate(data_loader):
         image_num += 1
-
         ground_truth = utils.preprocess(data) # ground truth is pixel space
-        utils.save_image(ground_truth, out_folder, f"{str(i)}_groundTruth")
+        utils.save_image(ground_truth, out_folder, f"{str(image_num)}_groundTruth")
 
         deconstructed, kernel, noise, undersampled_kspace, sample_mask = task.get_deconstructed(ground_truth, seed=image_num, get_undersampled_kspace=True, get_sample_mask=True)
         # print("deconstructed", deconstructed, torch.norm(deconstructed))
-        utils.save_image(deconstructed, out_folder, f"{str(i)}_noisy")
+        utils.save_image(deconstructed, out_folder, f"{str(image_num)}_noisy")
         # undersampled_kspace = y = given measurement
         # deconstructed = F^(-1) y = initial guess TODO: check this
         deconstructed_psnr, deconstructed_ssim = utils.get_psnr(ground_truth, deconstructed), utils.get_ssim(ground_truth, deconstructed)
@@ -329,7 +447,7 @@ for k in range(len(h5_files_test)):
         # for p in artifact_net.parameters():
         #         print (p.data[0][0][0][0])
         #         break
-        utils.save_image(supervised_learning_prediction, out_folder, f"{str(i)}_supervised")
+        utils.save_image(supervised_learning_prediction, out_folder, f"{str(image_num)}_supervised")
         # print("supervised_shape", supervised_learning_prediction.shape)
         supervised_psnr, supervised_ssim = utils.get_psnr(ground_truth, supervised_learning_prediction), utils.get_ssim(ground_truth, supervised_learning_prediction)
         supervised_psnr_values.append(supervised_psnr)
@@ -343,18 +461,14 @@ for k in range(len(h5_files_test)):
         prediction = torch.zeros(deconstructed.shape).cuda()
         # var_prediction = Variable(prediction, requires_grad=True) # allows you to calculate gradient with respect to this variable later
         # prediction = x^t = current guess
-        params = {
-            "lr": ,
-            "denoiser_scale": 1,
-            "denoiser_weight": 1,
-            "min_residual": 1e-9,
-            "max_iter": 3000,
-        }
-        modelbased_prediction = methodC_grad(prediction, undersampled_kspace, denoiser_net,
+        # modelbased_prediction = iterative_method(prediction, undersampled_kspace, denoiser_net,
+        #                                             deconstructed, ground_truth, sample_mask, image_num,
+        #                                             iterative_params)
+        modelbased_prediction = iterative_red(prediction, undersampled_kspace, denoiser_net,
                                                     deconstructed, ground_truth, sample_mask, image_num,
-                                                    params)
+                                                    iterative_red_params)
         # print("predictionC", modelbased_prediction)
-        utils.save_image(modelbased_prediction.detach(), out_folder, f"{str(i)}_modelbased")
+        utils.save_image(modelbased_prediction.detach(), out_folder, f"{str(image_num)}_modelbased")
 
         # print("model_shape", modelbased_prediction.shape)
 

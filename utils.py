@@ -15,6 +15,7 @@ from model_zoo.dncnn_model import DnCNN
 from model_zoo.unet_model import UNet
 from model_zoo.udvd_ablation_model import UDVDablation_nodynamic
 from model_zoo.dncnn_ablation_model import DnCNNablationTail, DnCNNablationFull, DnCNNablationHead, DnCNNablationMiddle, DnCNNablation_more_dyn
+from model_zoo.dncnn_specnorm_model import DnCNNSpecNorm
 
 def imshow(img, swap_axes=False):
     if swap_axes:
@@ -137,11 +138,13 @@ def get_model(model_name):
         return DnCNNablationFull(channels=1)
     elif model_index == 8:
         return DnCNNablation_more_dyn(channels=1)
+    elif model_index == 9:
+        return DnCNNSpecNorm(1)
     else:
         raise ValueError("couldn't find model:", model_name)
 
 def get_model_names():
-    return ["udvd", "dncnn", "unet", "udvd_abl_nodyn", "dncnn_abl_head", "dncnn_abl_mid", "dncnn_abl_tail", "dncnn_abl_full", "dncnn_abl_moredyn"]
+    return ["udvd", "dncnn", "unet", "udvd_abl_nodyn", "dncnn_abl_head", "dncnn_abl_mid", "dncnn_abl_tail", "dncnn_abl_full", "dncnn_abl_moredyn", "dncnn_spec"]
 
 def get_task_names():
     return ["undersample", "vnoise", "quarter"]
