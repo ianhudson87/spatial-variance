@@ -19,10 +19,11 @@ mri_image_type = 'reconstruction_rss'
 task_name = "undersample"
 os.environ["CUDA_VISIBLE_DEVICES"]=gpu_num
 # denoiser_model_name = "dncnn"
-denoiser_model_name = "dncnn_spec"
+denoiser_model_name = "dncnn_dynamic_specnorm"
 artifact_model_name = "dncnn"
 # denoiser_checkpoint_name = "dncnn_constant_noise_1-31-15-47"
-denoiser_checkpoint_name = "dncnn_spec_constant_noise_2-24-16-2"
+# denoiser_checkpoint_name = "dncnn_spec_constant_noise_2-24-16-2"
+denoiser_checkpoint_name = "dncnn_dynamic_specnorm_vnoise_3-9-11-45"
 artifact_checkpoint_name = "dncnn_Undersample_2-2-5-46"
 epoch = 50
 out_folder = "modelbased_learning_" + test_name
@@ -405,11 +406,11 @@ def iterative_red_grid_search(lr_values, tau_values, min_residual_values, max_it
 #     image_test_num=15)
 
 grid_search_out = iterative_red_grid_search(
-    lr_values = [1, 0.5, 0.25, 0.1],
-    tau_values = [0.25, 0.1, 0.01, 0.001],
-    min_residual_values = [1e-10],
+    lr_values = [1, 0.5, 0.25, 0.125],
+    tau_values = [0.5, 0.25, 0.125, 0.0625],
+    min_residual_values = [1e-11],
     max_iter = 2000,
-    image_test_nums=[1, 15, 30])
+    image_test_nums=[1, 7, 15, 23, 30])
 print(grid_search_out)
 
 iterative_red_params = grid_search_out["best_params"]

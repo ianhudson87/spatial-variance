@@ -16,6 +16,7 @@ from model_zoo.unet_model import UNet
 from model_zoo.udvd_ablation_model import UDVDablation_nodynamic
 from model_zoo.dncnn_ablation_model import DnCNNablationTail, DnCNNablationFull, DnCNNablationHead, DnCNNablationMiddle, DnCNNablation_more_dyn
 from model_zoo.dncnn_specnorm_model import DnCNNSpecNorm
+from model_zoo.dncnn_dynamic_specnorm import DnCNNDynamicSpecnorm, DnCNNDynamicSpecnormMoreOutputLayers, DnCNNDynamicSpecnormMoreDynamicLayers
 
 def imshow(img, swap_axes=False):
     if swap_axes:
@@ -140,11 +141,20 @@ def get_model(model_name):
         return DnCNNablation_more_dyn(channels=1)
     elif model_index == 9:
         return DnCNNSpecNorm(1)
+    elif model_index == 10:
+        return DnCNNDynamicSpecnorm(1)
+    elif model_index == 11:
+        return DnCNNDynamicSpecnorm(1)
+    elif model_index == 12:
+        return DnCNNDynamicSpecnorm(1)
     else:
         raise ValueError("couldn't find model:", model_name)
 
 def get_model_names():
-    return ["udvd", "dncnn", "unet", "udvd_abl_nodyn", "dncnn_abl_head", "dncnn_abl_mid", "dncnn_abl_tail", "dncnn_abl_full", "dncnn_abl_moredyn", "dncnn_spec"]
+    return ["udvd", "dncnn", "unet", "udvd_abl_nodyn",
+    "dncnn_abl_head", "dncnn_abl_mid", "dncnn_abl_tail", "dncnn_abl_full", "dncnn_abl_moredyn",
+    "dncnn_spec", "dncnn_dynamic_specnorm",
+    "dncnn_dynamic_specnorm_more_out_layers", "dncnn_dynamic_specnorm_more_dyn_layers"]
 
 def get_task_names():
     return ["undersample", "vnoise", "quarter"]
