@@ -19,7 +19,7 @@ torch.set_num_threads(1)
 task_names = utils.get_task_names()
 model_names = utils.get_model_names()
 if len(sys.argv) != 4 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[3] not in model_names:
-    sys.exit(f"Usage: main.py [task] [gpu #] [model] task={task_names} model={model_names}")
+    sys.exit(f"Usage: supervisedLearning.py [task] [gpu #] [model] task={task_names} model={model_names}")
 task_name = sys.argv[1]
 model_name = sys.argv[3]
 
