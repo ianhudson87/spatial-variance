@@ -16,7 +16,7 @@ torch.set_num_threads(1)
 task_names = utils.get_task_names()
 model_names = utils.get_model_names()
 if len(sys.argv) != 6 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[5] not in model_names:
-    sys.exit(f"Usage: testing.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={task_names} model_name={model_names}")
+    sys.exit(f"Usage: supervisedLearningTesting.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={task_names} model_name={model_names}")
 task_name = sys.argv[1]
 checkpoint_name = sys.argv[3]
 epoch = sys.argv[4]
