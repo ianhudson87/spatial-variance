@@ -19,13 +19,14 @@ mri_image_type = 'reconstruction_rss'
 task_name = "undersample"
 os.environ["CUDA_VISIBLE_DEVICES"]=gpu_num
 # denoiser_model_name = "dncnn"
-denoiser_model_name = "dncnn_dynamic_specnorm"
+denoiser_model_name = "dncnn_dynamic_specnorm_more_dyn_layers"
 artifact_model_name = "dncnn"
 # denoiser_checkpoint_name = "dncnn_constant_noise_1-31-15-47"
 # denoiser_checkpoint_name = "dncnn_spec_constant_noise_2-24-16-2"
-denoiser_checkpoint_name = "dncnn_dynamic_specnorm_vnoise_3-9-11-45"
+# denoiser_checkpoint_name = "dncnn_dynamic_specnorm_more_out_layers_vnoise_4-8-20-31"
+denoiser_checkpoint_name = "dncnn_dynamic_specnorm_more_dyn_layers_vnoise_4-8-7-13"
 artifact_checkpoint_name = "dncnn_Undersample_2-2-5-46"
-epoch = 50
+epoch = 22
 out_folder = "modelbased_learning_" + test_name
 out_path = os.path.join("test_logs", out_folder)
 writer = SummaryWriter(log_dir=out_path)

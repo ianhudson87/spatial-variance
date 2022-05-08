@@ -144,9 +144,9 @@ def get_model(model_name):
     elif model_index == 10:
         return DnCNNDynamicSpecnorm(1)
     elif model_index == 11:
-        return DnCNNDynamicSpecnorm(1)
+        return DnCNNDynamicSpecnormMoreOutputLayers(1)
     elif model_index == 12:
-        return DnCNNDynamicSpecnorm(1)
+        return DnCNNDynamicSpecnormMoreDynamicLayers(1)
     else:
         raise ValueError("couldn't find model:", model_name)
 
