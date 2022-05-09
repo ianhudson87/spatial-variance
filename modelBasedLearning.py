@@ -7,44 +7,57 @@ from torch.autograd import Variable
 import sampleMask
 from tensorboardX import SummaryWriter
 import random
+import sys
 
 random.seed(0)
 
-gpu_num = input("gpu num:")
-test_name = input("test name:")
+
+
+############################### GETTING A BUNCH OF PARAMETERS
+# argument variables
+task_names = utils.get_task_names()
+model_names = utils.get_model_names()
+if len(sys.argv) != 6 or sys.argv[1] not in task_names or not sys.argv[2].isnumeric or sys.argv[5] not in model_names:
+    sys.exit(f"Usage: modelBasedLearning.py [task] [gpu #] [checkpoint_name] [epoch] [model_name] task={task_names} model_name={model_names}")
+task_name = sys.argv[1]
+denoiser_checkpoint_name = sys.argv[3]
+epoch = sys.argv[4]
+model_name = sys.argv[5]
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]=sys.argv[2]
 
 data_path = os.path.join("data", "singlecoil_val")
 batch_size = 1
 mri_image_type = 'reconstruction_rss'
-task_name = "undersample"
-os.environ["CUDA_VISIBLE_DEVICES"]=gpu_num
-# denoiser_model_name = "dncnn"
-denoiser_model_name = "dncnn_dynamic_specnorm_more_dyn_layers"
-artifact_model_name = "dncnn"
-# denoiser_checkpoint_name = "dncnn_constant_noise_1-31-15-47"
-# denoiser_checkpoint_name = "dncnn_spec_constant_noise_2-24-16-2"
-# denoiser_checkpoint_name = "dncnn_dynamic_specnorm_more_out_layers_vnoise_4-8-20-31"
-denoiser_checkpoint_name = "dncnn_dynamic_specnorm_more_dyn_layers_vnoise_4-8-7-13"
-artifact_checkpoint_name = "dncnn_Undersample_2-2-5-46"
+
+test_name = f"{model_name}_{task_name}_{utils.get_date_time()}"
+
+
+# denoiser_model_name = "dncnn_dynamic_specnorm_more_dyn_layers"
+# artifact_model_name = "dncnn"
+
+# denoiser_checkpoint_name = "dncnn_dynamic_specnorm_more_dyn_layers_vnoise_4-8-7-13"
+# artifact_checkpoint_name = "dncnn_Undersample_2-2-5-46"
 epoch = 22
 out_folder = "modelbased_learning_" + test_name
 out_path = os.path.join("test_logs", out_folder)
 writer = SummaryWriter(log_dir=out_path)
 
 # initialize network
-denoiser_net = utils.get_model(denoiser_model_name)
-artifact_net = utils.get_model(artifact_model_name)
+denoiser_net = utils.get_model(model_name)
+# artifact_net = utils.get_model(artifact_model_name)
 if torch.cuda.is_available():
     denoiser_net.cuda()
-    artifact_net.cuda()
+    # artifact_net.cuda()
 
 # load the checkpoints
 denoiser_checkpoint = torch.load(f'./runs/{denoiser_checkpoint_name}/net{epoch}.pth')
 denoiser_net.load_state_dict(denoiser_checkpoint['net'])
 
-artifact_checkpoint = torch.load(f'./runs/{artifact_checkpoint_name}/net{epoch}.pth')
-artifact_net.load_state_dict(artifact_checkpoint['net'])
-artifact_net.eval()
+# artifact_checkpoint = torch.load(f'./runs/{artifact_checkpoint_name}/net{epoch}.pth')
+# artifact_net.load_state_dict(artifact_checkpoint['net'])
+# artifact_net.eval()
 
 # get config about the undersample task
 opt = utils.get_options(f"./task_configs/{task_name}_options.json")
@@ -190,11 +203,6 @@ def iterative_red(prediction, given_measurement, denoising_net,
 
     return prediction
 
-deconstructed_psnr_values, deconstructed_ssim_values = [], []
-supervised_psnr_values, supervised_ssim_values = [], []
-modelbased_final_psnr_values, modelbased_final_ssim_values = [], []
-modelbased_max_psnr_values, modelbased_max_ssim_values = [], []
-
 def iterative_red_grid_search(lr_values, tau_values, min_residual_values, max_iter, image_test_nums):
     # returns optimal lr and tau values using RED
     testing_images = []
@@ -250,24 +258,31 @@ def iterative_red_grid_search(lr_values, tau_values, min_residual_values, max_it
 #     image_test_num=15)
 
 grid_search_out = iterative_red_grid_search(
-    lr_values = [1, 0.5, 0.25, 0.125],
-    tau_values = [0.5, 0.25, 0.125, 0.0625],
+    lr_values = [1],
+    tau_values = [0.5],
     min_residual_values = [1e-11],
     max_iter = 2000,
-    image_test_nums=[1, 7, 15, 23, 30])
+    image_test_nums=[1])
 print(grid_search_out)
 
 iterative_red_params = grid_search_out["best_params"]
 
 
-iterative_params = {
-            "lr": 1,
-            "denoiser_scale": 1,
-            "denoiser_weight": 0.001,
-            "min_residual": 1e-10,
-            "max_iter": 600,
-}
+# iterative_params = {
+#             "lr": 1,
+#             "denoiser_scale": 1,
+#             "denoiser_weight": 0.001,
+#             "min_residual": 1e-10,
+#             "max_iter": 600,
+# }
 
+deconstructed_psnr_values, deconstructed_ssim_values = [], []
+# supervised_psnr_values, supervised_ssim_values = [], []
+modelbased_final_psnr_values, modelbased_final_ssim_values = [], []
+modelbased_max_psnr_values, modelbased_max_ssim_values = [], []
+
+
+################### ACTUALLY RUNNING STUFF HERE
 image_num = -1
 for k in range(len(h5_files_test)):
     print("k")
@@ -288,17 +303,12 @@ for k in range(len(h5_files_test)):
         deconstructed_ssim_values.append(deconstructed_ssim)
 
         #################### SUPERVISED LEARNING (DNCNN) ################
-        supervised_learning_prediction = torch.clamp(artifact_net(deconstructed), 0., 1.).detach()
-        # for p in artifact_net.parameters():
-        #         print (p.data[0][0][0][0])
-        #         break
-        utils.save_image(supervised_learning_prediction, out_folder, f"{str(image_num)}_supervised")
-        # print("supervised_shape", supervised_learning_prediction.shape)
-        supervised_psnr, supervised_ssim = utils.get_psnr(ground_truth, supervised_learning_prediction), utils.get_ssim(ground_truth, supervised_learning_prediction)
-        supervised_psnr_values.append(supervised_psnr)
-        supervised_ssim_values.append(supervised_ssim)
+        # supervised_learning_prediction = torch.clamp(artifact_net(deconstructed), 0., 1.).detach()
+        # utils.save_image(supervised_learning_prediction, out_folder, f"{str(image_num)}_supervised")
+        # supervised_psnr, supervised_ssim = utils.get_psnr(ground_truth, supervised_learning_prediction), utils.get_ssim(ground_truth, supervised_learning_prediction)
+        # supervised_psnr_values.append(supervised_psnr)
+        # supervised_ssim_values.append(supervised_ssim)
         ####################################################################
-        # break
 
         ################### MODEL BASED LEARNING #######################
 
@@ -325,7 +335,7 @@ for k in range(len(h5_files_test)):
     # break
 
 utils.write_test_file(deconstructed_psnr_values, deconstructed_ssim_values, out_folder, "deconstructed")
-utils.write_test_file(supervised_psnr_values, supervised_ssim_values, out_folder, "supervised")
+# utils.write_test_file(supervised_psnr_values, supervised_ssim_values, out_folder, "supervised")
 utils.write_test_file(modelbased_final_psnr_values, modelbased_final_ssim_values, out_folder, "modelbased_final")
 
 # print("prediction", final_prediction)

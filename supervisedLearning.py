@@ -43,13 +43,6 @@ if torch.cuda.is_available():
     net.cuda()
     criterion.cuda()
 
-####################
-checkpoint_name = 'dncnn_dynamic_specnorm_more_dyn_layers_vnoise_4-8-21-9'
-epoch = 50
-checkpoint = torch.load(f'./runs/{checkpoint_name}/net{epoch}.pth')
-net.load_state_dict(checkpoint['net'])
-####################
-
 # Tensorboard
 writer = SummaryWriter(log_dir=opt["out_folder"])
 
